@@ -2,7 +2,9 @@
 
 These are the questions a Temporal Solutions Architect prepares against. Every one answered in prework is meeting time recovered for actual recommendations. Ask them at the Phase 3 confirm gate, **skipping anything the code scan already answered** (state the observed answer, ask for confirmation instead). Preface the intake with: *"Approximate answers are helpful — order of magnitude is enough, and 'unknown' is a fine answer."*
 
-Record every answer in `intake.md`, tagged **stated** (user said it) or **observed** (seen in code, with the file reference). Every "unknown" also becomes a gap-ledger entry.
+Record every answer in `intake.md` using the inline evidence forms from SKILL.md — `*(stated)*` or `*(observed: path:line)*`. Every "unknown" also becomes a gap-ledger entry.
+
+Ask these as one block, not one at a time. Expect **partial answers** — that is the normal case, not a failure. If scope is confirmed and intake is half done, proceed to Phase 4 and carry the rest to the Phase 6 gate.
 
 ## 1. Use case, in the customer's own words
 - What business problem does this system solve? (Not the technical shape — the *why*.)
@@ -13,8 +15,12 @@ Record every answer in `intake.md`, tagged **stated** (user said it) or **observ
 - How built-out is it? Planning / early-stage with placeholders / running in staging / production. Nuance welcome ("workflow logic built and tested, external calls still stubbed" is a great answer).
 
 ## 3. A representative run (highest-leverage, lowest-effort item)
-- If any workflow already runs in a real namespace: **Namespace + Workflow ID** (and optionally Run ID) of one representative execution. Two copy-pasted IDs let the SA read real event history — retry counts, event counts, payload sizes, timing — which no diagram can show.
-- Pre-production? Skip without friction; note "pre-production" in the report.
+- If any workflow already runs in a real namespace: **Namespace + Workflow ID** (Run ID optional) of one representative execution. Two copy-pasted IDs let the SA read real event history — retry counts, event counts, payload sizes, timing — which no diagram can show.
+
+Three branches, not two:
+- **They can name one** → record it; it is the single most valuable line in the bundle.
+- **Pre-production** → skip without friction; note "pre-production" in the report.
+- **Runs exist, but none is nameable** → common for platform, infra, and multi-tenant teams ("it varies per cluster", "no single namespace"). This is a *structural* decline: record it as a gap with that reason and **do not ask again in Phase 7**. Offer the alternative — a dashboard screenshot, or aggregate numbers for one representative tenant.
 
 ## 4. Scale and the operational envelope
 The right Temporal advice genuinely changes with order of magnitude. Ask for rough numbers:

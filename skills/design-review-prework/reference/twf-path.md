@@ -1,36 +1,50 @@
 # The `twf` path (experimental)
 
-An **opt-in, experimental** alternative for Phases 4–5: recover the system into `.twf` (Temporal Workflow Format) — a validated, parseable model the customer keeps, edits, and visualizes — alongside the standard report. Offer it once, neutrally, at the Phase 3 confirm gate; if the user prefers the generic path, drop it without argument. If they opt in, everything below applies.
+An **opt-in, experimental** alternative for Phases 4–5: recover the system into `.twf` (Temporal Workflow Format) — a validated, parseable model the customer keeps, edits, and visualizes — alongside the standard bundle.
 
-## Step 0 — Verify the installation (never assume)
+## When it pays off
 
-Check, in order:
+Recommend it only when the review's questions are about **mechanics**: exact option values, control flow, child-workflow lifetime semantics, retry and timeout specifics. Writing near-executable notation forces precision that prose lets you skip, and that precision is where its findings come from.
 
-1. `twf --help` succeeds on PATH.
-2. The **temporal-architect skills** are present (Claude Code plugin `temporal-architect@temporal-architect`, `~/.cursor/skills/temporal-architect-*`, or a checkout's `skills/` tree). The needed one here is `temporal-architect-design` and its reverse-engineering references.
+It pays off much less when the review is about **topology or scale** — there, the Mermaid diagrams and the operational envelope carry the value, and the `.twf` becomes a curiosity riding along with the report. Mention the path once, neutrally; if the user prefers the generic path, drop it without argument.
 
-If either is missing, offer to help install via **public channels only** — VS Code / Cursor extension `jmbarzee.twf-syntax`; Claude Code `/plugin marketplace add jmbarzee/temporal-architect-dist` + `/plugin install temporal-architect@temporal-architect`; `npx -y @temporal-architect/twf`; `brew install jmbarzee/twf/twf`; `pip install twf-cli` — and after installing, **recommend restarting the prework in a fresh chat** so the skills load cleanly (offer to write a one-paragraph resume note into the output directory first: lead answers + confirmed scope, so nothing is lost).
+Two honest limits to set expectations against:
+- **`twf check` is a grammar gate, not a design reviewer.** Every error it reports is about notation, not about Temporal. It contributes no design findings on its own.
+- **`twf graph --json` gives a dispatch and containment listing**, useful as a call-wiring cross-check. It is not diagram structure — the diagrams still come from your research per the diagram guide.
 
-If verification fails and the user doesn't want to install, fall back to the generic path — say so plainly, no penalty.
+## Step 0 — Verified in Phase 0
+
+Availability (`twf --help`, plus the `temporal-architect` skills — `temporal-architect-design` and its reverse-engineering references) is established in Phase 0, before any code is read. If it is missing and the user wants this path, point them at the public install channels once — the VS Code / Cursor extension `jmbarzee.twf-syntax`, or `npx -y @temporal-architect/twf` — then, if it still isn't working, fall back to the generic path and say so plainly. No penalty; do not spend the flow debugging an install.
+
+## Read the notation before you write
+
+`temporal-architect-design/SKILL.md` says "write before you read the reference docs." That is good *greenfield* advice and **wrong here**: on the reverse path you already know the semantics, and the notation is the only unknown. Skim `notation-examples.md` and the `state:` block conventions first. Skipping it costs several parser round-trips and produces a first draft that a design review then flags wholesale.
 
 ## Recovery — delegate, don't reinvent
 
-The mechanics are owned by `temporal-architect-design`'s **reverse path**; follow its `reference/reverse-engineering.md` rather than improvising:
+The mechanics belong to `temporal-architect-design`'s reverse path; follow its `reference/reverse-engineering.md`:
 
 - Single bounded slice → project-discovery subagent → extract to `.twf` → fidelity check.
-- Multi-slice scope → slice-mapper subagent proposes the slice map → **confirm with the user** (merge this with the Phase 3 confirm gate — one confirmation, not two) → recover producers-before-consumers → stitch.
-- Discipline that carries over verbatim: domain slices are **symbols-only** (no invented workers/namespaces); the shared deployment topology is authored once in a `deploy` package; **fidelity first** — capture what the code does, anti-patterns included, never "fix" during extraction (the anti-patterns are exactly what the design review is for).
-- Gate the workspace with `twf check` over the whole tree; iterate to clean or explain remaining diagnostics in the retro.
+- Multi-slice scope → slice-mapper subagent proposes the slice map → confirm with the user **at the existing Phase 3 gate**, not as a second confirmation → recover producers-before-consumers → stitch.
+- Carry over verbatim: domain slices are **symbols-only** (no invented workers or namespaces); shared deployment topology is authored once in a `deploy` package; **fidelity first** — capture what the code does, anti-patterns included, and never "fix" during extraction. The anti-patterns are what the review is *for*.
+- Gate the workspace with `twf check` over the whole tree.
+
+### Sort the two kinds of review finding
+
+When the recovered model is reviewed, findings arrive in two categories that must not be confused. This is the most important judgment call on this path:
+
+- **"The code has an anti-pattern"** → preserve it in the model and report it. This is the deliverable.
+- **"Your model misstates the code"** → a model bug. Fix it immediately, and never let it reach the report as a design finding.
+
+The trap is real: writing an *effective* value into `options:` where the code leaves the option **unset** (so the server applies its default) misstates the code, while omitting it loses the behavior. Record the distinction in a comment and log it as a language gap.
 
 ## Outputs (in addition to the standard bundle)
 
 Under `<out>/twf/`:
 
-- The recovered `.twf` workspace (per-domain packages + `deploy/topology.twf`).
-- `twf-retro.md` — **language-gap ledger only**: things the code does that `.twf` could not express, each with the code location and what construct was missing. This feeds the toolchain; keep it separate from the customer's gap ledger. Things the *reader* couldn't determine (hidden wiring, missing access) go to the shared `gap-ledger.md`, never here.
-
-Diagrams on this path: derive structure from `twf graph --json` (topology) and the `.twf` itself (workflow shape), then still render Mermaid per the diagram guide — the SA receiving the bundle may have no twf tooling. The `.twf` files ride along as a bonus artifact, with one line in the report explaining what they are and where the toolchain lives.
+- The recovered `.twf` workspace (per-domain packages plus `deploy/topology.twf`).
+- `twf-retro.md` — a **language-gap ledger only**: things the code does that `.twf` could not express, each with its code location and the missing construct. This feeds the toolchain and is optional to share. Things the *reader* could not determine (hidden wiring, missing access) belong in `gap-ledger.md`, never here.
 
 ## Visualizer
 
-Offer to open the visualizer **for the customer's own exploration** (via the editor extension's `twf.visualize`, or the dist `twf-serve` if installed). It runs on localhost: useful to *them*, not shareable prework. The share manifest lists `.twf` files, rendered diagram images, and the report — never a localhost URL.
+Offer to open the visualizer for the customer's own exploration. It is localhost — useful to them, not shareable. The share manifest lists `.twf` files, diagrams, and the report; never a localhost URL.
