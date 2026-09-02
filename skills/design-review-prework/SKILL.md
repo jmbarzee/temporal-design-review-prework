@@ -32,6 +32,8 @@ Never invent a fact about the system, and never let a plausible inference pass a
 
 **The user reviews before anything is shared.** The bundle ends with a share manifest. You never send it anywhere yourself.
 
+**The bundle is the customer's, not this skill's.** Never put commentary about these instructions — what was unclear, what you'd change — into any bundle file. It goes to a Temporal SA who has no stake in this skill's internals. (On the `twf` path there *is* a legitimate toolchain reflection deliverable, `twf-retro.md`; it is about the `.twf` notation, not about this skill. See the twf-path reference.)
+
 ## Phase 0 — Prep (tooling)
 
 The only phase where egress is allowed. Do this before touching any code.

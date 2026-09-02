@@ -43,7 +43,25 @@ The trap is real: writing an *effective* value into `options:` where the code le
 Under `<out>/twf/`:
 
 - The recovered `.twf` workspace (per-domain packages plus `deploy/topology.twf`).
-- `twf-retro.md` — a **language-gap ledger only**: things the code does that `.twf` could not express, each with its code location and the missing construct. This feeds the toolchain and is optional to share. Things the *reader* could not determine (hidden wiring, missing access) belong in `gap-ledger.md`, never here.
+- `twf-retro.md` — the **language/toolchain reflection**. A first-class deliverable of this path, not a byproduct.
+
+### Three reflections, three audiences — never merge them
+
+This path produces a reflection that is easy to confuse with two other things. Keep them in separate files with separate readers:
+
+| Artifact | Question it answers | Audience |
+|---|---|---|
+| `twf/twf-retro.md` | What did the code do that **`.twf` could not express**? | The `temporal-architect` toolchain maintainers |
+| `gap-ledger.md` | What could **the reader not determine** about this system? | The SA and the customer's own team |
+| *(not in the bundle)* | How well did **this prework skill** perform? | Whoever maintains this skill |
+
+**`twf-retro.md` is about the notation, not about the system and not about this skill.** Each entry: what the code does, its `file:line`, and the construct that was missing or the workaround forced. A parser bug or a rejected-but-valid construct belongs here, with a minimal reproducing probe when you have one — that is the most actionable thing a maintainer can receive.
+
+Two exclusions that matter:
+- Something *the reader* could not determine — hidden deployment wiring, config-driven routing, a service with no source — is a **`gap-ledger.md`** entry. It is a fact about access, not about the language.
+- Friction with *these prework instructions* is **neither**. Do not put it in the bundle; the bundle is the customer's, and it goes to a Temporal SA who has no stake in this skill's internals. Raise it in conversation if the user asks.
+
+It is fine to say plainly that `twf-retro.md` is optional to share with the SA — its natural destination is a toolchain issue, and the customer may reasonably want to send it upstream themselves.
 
 ## Visualizer
 
