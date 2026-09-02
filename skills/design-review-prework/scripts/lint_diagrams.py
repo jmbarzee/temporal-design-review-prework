@@ -18,6 +18,20 @@ NODE_START = re.compile(r'(?<![\w`"])([A-Za-z][\w]*)\s*(\[\[|\[\(|\(\[|\(\(|\{\{
 CHAIN_KINDS = ("sequenceDiagram", "stateDiagram")
 
 
+def mask_quoted(src):
+    """Replace quoted-string contents with filler so label text is never
+    mistaken for a node declaration. Preserves length and newlines."""
+    out=[]; in_q=False
+    for ch in src:
+        if ch == '"':
+            in_q = not in_q; out.append(ch)
+        elif in_q:
+            out.append("\n" if ch == "\n" else "\x00")
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
 def strip_comments(src):
     """Blank out %% comment lines but keep line numbering intact."""
     out = []
@@ -28,7 +42,8 @@ def strip_comments(src):
 
 def find_labels(src):
     """Yield (line_no, node_id, opener, raw_label) for each node declaration."""
-    for m in NODE_START.finditer(src):
+    scan = mask_quoted(src)
+    for m in NODE_START.finditer(scan):
         node_id, opener = m.group(1), m.group(2)
         closer = next((c for o, c in OPENERS if o == opener), None)
         if closer is None:
@@ -68,8 +83,10 @@ def lint(path):
     node_ids = set()
     for ln, node_id, opener, label in find_labels(src):
         node_ids.add(node_id)
-        quoted = label.strip().startswith('"') and label.strip().endswith('"')
+        stripped = label.strip()
+        quoted = stripped.startswith('"') and stripped.endswith('"') and stripped.count('"') == 2
         if not quoted:
+            label = mask_quoted(label).replace("\x00", "")
             if "\n" in label:
                 add(ln, f'{node_id}: unquoted label spans a newline -> WILL NOT RENDER; wrap in "..."')
             bad = re.search(r'[(),;:#&<>|/]', label)
