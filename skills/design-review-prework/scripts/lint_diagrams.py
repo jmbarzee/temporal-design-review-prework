@@ -103,26 +103,35 @@ def lint(path):
         m = re.search(r'--+\s*([^-|>"\n][^->\n]*?)\s*--+>', line)
         if m and not m.group(1).strip().startswith('"'):
             add(i, f'unquoted edge label {m.group(1).strip()!r} -> use -- "text" -->')
-    # unlabeled edges are questions the SA has to ask
-    plain = len(re.findall(r'--+>(?!\|)', src)) - len(re.findall(r'--\s*"[^"]*"\s*--+>', src))
-    # legend
-    if "egend" not in raw_src:
-        add(0, "no legend -- every diagram needs one (a %% comment is fine)")
+    # legend must be IN-CANVAS (a subgraph), never a %% comment: comments vanish when rendered
+    if not re.search(r'subgraph\s+\w*\s*\[\s*"?[^"\]]*legend', src, re.I):
+        if re.search(r'(?i)legend', raw_src):
+            add(0, 'legend is a %% comment (or unrecognized): it VANISHES when rendered -> '
+                   'make it an in-canvas `subgraph legend ["Legend"]` of shape samples')
+        else:
+            add(0, 'no legend -> add an in-canvas `subgraph legend ["Legend"]` of shape samples')
     # size: topology diagrams cap at 25; workflow-chain diagrams are exempt
     n = len(node_ids)
-    exempt = kind_name in CHAIN_KINDS or re.search(r'(?i)workflow|chain|internal', path.split("/")[-1])
-    if n > 25 and not exempt:
-        add(0, f"{n} nodes: over the 25-node cap for a topology diagram -> split it")
-    elif n > 40:
+    role = re.search(r'%%\s*role:\s*(topology|workflow)', raw_src, re.I)
+    if not role:
+        add(0, 'no role declared -> add `%% role: topology` or `%% role: workflow` as the first '
+               'line; the node cap depends on it and must not be inferred from the filename')
+        declared = "workflow" if kind_name in CHAIN_KINDS else "topology"
+    else:
+        declared = role.group(1).lower()
+    if declared == "topology" and n > 25:
+        add(0, f"{n} nodes: over the 25-node cap for a topology diagram -> split by domain "
+               f"into external-architecture-<domain>.mmd")
+    elif declared == "workflow" and n > 40:
         add(0, f"{n} nodes: very large even for a workflow diagram -> consider splitting")
-    return sorted(set(issues)), n, plain
+    return sorted(set(issues)), n
 
 
 def main(paths):
     bad = False
     for p in paths:
         try:
-            issues, n, plain = lint(p)
+            issues, n = lint(p)
         except OSError as e:
             print(f"=== {p}\n   cannot read: {e}")
             bad = True
@@ -135,8 +144,6 @@ def main(paths):
             where = f"L{ln}" if ln else "  -"
             print(f"   {where:<5} {msg}")
             bad = True
-        if plain > 0:
-            print(f"   note  {plain} unlabeled edge(s): label every edge with a verb, or log a gap")
     print()
     print("FAIL: fix the above, then re-run." if bad else "PASS: all diagrams clean.")
     return 1 if bad else 0

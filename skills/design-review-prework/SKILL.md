@@ -51,6 +51,16 @@ The output is equally the **customer's own artifact**: an architecture document 
 
 Never invent a fact about the system, and never let a plausible inference pass as observation. What you cannot determine goes in the gap ledger.
 
+**When research contradicts what the user told you, the code wins — and you say so carefully.** This is one of the most valuable things this tool does, and it needs handling rather than luck. A customer's stated premise is often folklore that has drifted from the implementation; catching it *before* the meeting saves the SA from reviewing a system that doesn't exist.
+
+The protocol:
+
+1. **Verify it yourself first.** A contradiction is not reportable on a subagent's word — read the cited lines.
+2. **Keep both.** Record the observation with its `file:line` and keep the stated premise, marked superseded. Never silently delete what the user said; they may know something the code doesn't show.
+3. **Surface it prominently** — the executive summary, not a footnote — because it may change the shape of the review.
+4. **Gate the consequences behind the user's confirmation.** Ask them to confirm or correct before letting the correction drive "assume when advising" guidance. They may have meant a different component.
+5. **State it without scoring it.** "The code exits when the pending set is empty *(observed: server.go:227)*; the team described these workflows as long-lived *(stated)*" — not "your premise was wrong."
+
 **Verify before you repeat.** Any claim from a subagent that lands in the report or a diagram must be spot-checked against the cited `file:line` first. A cheap read is the difference between a report and a rumor — and an unverified claim in front of an SA costs the customer credibility.
 
 **The gap ledger is continuous, not a phase.** From Phase 2 onward, every unknown goes into `gap-ledger.md` the moment you meet it: what is missing, why the review cares, what would close it. Never block on a gap — "we could not see the billing service; here is what its callers imply" is a deliverable.
@@ -68,9 +78,11 @@ The only phase where egress is allowed. Do this before touching any code.
 1. **Check for a Mermaid renderer**, in order: `mmdc --version` (the `@mermaid-js/mermaid-cli` package), then `docker` (image `minlag/mermaid-cli`).
 2. **If none is present, offer to install one, with the reason** — not as a bare yes/no. Say what it buys: a rendered PNG/SVG is what actually gets pasted into an intake form, a deck, or a ticket, and it proves the diagram parses; unrendered source may simply not open for the SA. Offer `npx -y @mermaid-js/mermaid-cli` (no global install) or a global `npm i -g @mermaid-js/mermaid-cli`, note it's a one-time public-registry download of a headless-browser-backed renderer, and say plainly that declining is fine — the bundle still ships valid diagram source that renders at mermaid.live.
 3. **Record the outcome.** The renderer's presence decides whether Phase 5 can *prove* the diagrams render or only lint them.
-4. **Optional, experimental:** if the user might want the `twf` path (see below), verify it here too — `twf --help` plus the `temporal-architect` skills. Do not raise it as a question yet; just know the answer so Phase 3's offer is accurate.
-
 Nothing in this phase reads customer code. Once it ends, the egress window closes.
+
+**Merge this with Phase 1.** Phase 0 and Phase 1 are both user-facing asks with no code reading in between, so send them as one message rather than costing the user two round-trips. They are numbered separately because the egress rule changes between them, not because they need separate turns.
+
+The optional `twf` toolchain is *not* verified here — checking a path the user may not want is speculative work. Verify it at Phase 3, only if they express interest.
 
 ## Phase 1 — Lead
 
@@ -86,6 +98,16 @@ Do not ask the full intake yet; it lands in Phase 3, once you can ask informed q
 ## Phase 2 — Survey + explore
 
 **First, establish the target's stage.** Run the cheap git survey from [reference/maturity-signals.md](reference/maturity-signals.md) — git metadata only, seconds per repo — and carry a one-line summary of what it suggests into the Phase 3 gate, where you ask the user to confirm or correct it. Stage is context, never a grade, and it **calibrates the whole run**: what you ask for, how deep you go, and which intake items are moot. A prototype has no representative run to give you; a mature production system has real numbers worth chasing hard.
+
+**Establish the generated-vs-hand-written boundary before counting anything.** In a codegen-heavy repo, generated bindings dominate every raw count and make the inventory worthless — a signature grep can return five figures where the real answer is dozens. Identify generated, vendored, and mock paths (`*.pb.go`, `*.gen.go`, `api/gen/`, `mocks/`, `vendor/`, `testdata/`), exclude them, and **state the exclusion beside any number you report**.
+
+`scripts/scan_temporal.sh <repo> [focus-path ...]` does this for you and is the preferred way to run this phase — it bakes in the exclusions, reports how many files it dropped, and counts the things that actually mean something. Run it per repo:
+
+```bash
+scripts/scan_temporal.sh /path/to/repo internal/workflows/foo
+```
+
+**Registration sites are the inventory proxy, not function signatures.** `RegisterWorkflow*` / `RegisterActivity*` call sites tell you what a worker actually hosts; raw definition greps do not survive codegen. If you produce a number you then discard, do not carry it into the report — a discarded measurement that needs explaining is worse than no measurement.
 
 **Then a cheap structural scan** from the lead paths — **enumerate, don't understand**:
 
@@ -115,7 +137,20 @@ Deep exploration of the confirmed scope, along two perspectives. Both matter; [r
 1. **Internal to Temporal** — the shape of each in-focus workflow: trigger, major steps, activities, child workflows, signals, queries, updates, timers, retries and failure paths, continue-as-new, final outcomes. Plus worker topology: which workers, which task queues, what is co-hosted. Capture **exact values** — timeouts, retry policies, concurrency limits, page sizes — because precise numbers are what let an SA judge quickly. Record the number; do not rate it.
 2. **External to Temporal** — the system *around* it: databases, queues, third-party APIs, user-facing services, and where Temporal sits among them. **Scoping rule: explore a non-Temporal component only to answer "how does this relate to my workflows?"** One hop out from workflow/activity/starter code is the boundary; note what lies beyond as a labeled external box and stop. Do not map the customer's whole company.
 
-**Fan out with subagents when scope is large** (multiple services, giant workflows, more than ~3 focus workflows): one per bounded slice. Give each subagent, verbatim: the read-only rule, the one-hop external scoping rule, the **map-not-review rule and its banned vocabulary**, and an **output budget** — a structured summary of conclusions with `file:line` citations, roughly one page, never raw file dumps or exhaustive line-by-line inventories. Then **verify their load-bearing claims** against the cited lines before those claims enter the report.
+**When a dependency is the same technology as the system under review, label it explicitly to prevent conflation.** A system that both uses a technology and exposes it as a product feature will have two unrelated surfaces that look identical in a diagram; merging them is a serious error in front of an SA. Name each one for its role ("the platform's own control API" versus "the customer-facing feature of the same name") and keep them as separate nodes.
+
+**Fan out with subagents when scope is large** (multiple services, giant workflows, more than ~3 focus workflows): one per bounded slice. Give each subagent, verbatim: the read-only rule, the one-hop external scoping rule, the **map-not-review rule and its banned vocabulary**, an **output budget** — a structured summary of conclusions with `file:line` citations, roughly one page, never raw file dumps or exhaustive line-by-line inventories — plus all of the following:
+
+- **A numbered question list** specific to that slice, so returns are comparable and you can tell what went unanswered.
+- **Absolute paths**, with an explicit instruction not to use relative ones — a subagent's working directory may not be what you assume.
+- **An evidence label on every claim:** `[VERIFIED]` (it read the line and confirmed), `[SUBAGENT]` (reported, not yet checked), `[INFERRED]` (reasoning, not observation). Verification status must survive into your notes, or you cannot tell later what still needs checking.
+- **"Reporting that you found nothing is a valid and important finding. Do not manufacture hits."** A trustworthy set of zeros is a real result; a subagent that feels obliged to return findings will produce noise you then have to disprove.
+
+**Any comparative or evaluative statement must carry `[INFERRED]`.** "This is the largest surface of its kind here" is reasoning, not observation, and the label is what keeps it honest. Prefer restating it as the underlying counts.
+
+Then **verify their load-bearing claims** against the cited lines before those claims enter the report.
+
+**Write `.work` slice notes in report voice, not analysis voice.** You will otherwise write every finding twice — once to think, once to publish. Notes written as publishable prose let §4 be assembled by extraction.
 
 Anything the code cannot show — deployment-time wiring, config-driven routing, services with no source available — goes to the gap ledger, not into guesswork.
 

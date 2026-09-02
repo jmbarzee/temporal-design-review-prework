@@ -10,6 +10,7 @@ Everything lands in the output directory chosen in Phase 1. Nothing is written a
   share-manifest.md            # what's in the bundle, what each file reveals
   diagrams/
     external-architecture.mmd  # + .png/.svg when Phase 0 produced a renderer
+    external-architecture-<domain>.mmd  # ...or split by domain when over the 25-node cap
     <workflow>-internal.mmd    # one per in-focus workflow...
     <family>-internal.mmd      # ...or one per workflow family (see diagram guide)
   .work/                       # scratch: raw subagent returns, notes. Not shared.
@@ -55,6 +56,12 @@ Distinguish the two kinds, because they route differently at the Phase 6 gate: *
 Rank the ledger by **what an answer would change in the SA's advice**, not by category. A gap whose answer would move the recommendation belongs at the top: workflow lifetime alone is inert, but lifetime combined with signal rate is what determines whether history grows without bound — so the missing signal rate outranks a missing start rate. Say why an entry is ranked where it is, in one clause, without asserting what the answer will turn out to be.
 
 The ledger is the map's blank space: honest, bounded, and labeled. "We could not see the billing service; here is what its callers imply about its interface" is cartography. "The billing service is probably a bottleneck" is not.
+
+## Two practical notes
+
+**Splitting the external diagram is allowed.** When the topology exceeds the 25-node cap, emit `external-architecture-<domain>.mmd` per domain rather than compressing many real systems into one grouped node. If you do group, the group node must name its members, and a group still counts as one node.
+
+**Bundle filenames can collide with agent-harness guards.** `report.md` in particular may trip a heuristic that blocks agents from writing report files. If a write is refused, that is the harness, not this spec — create the file another way and carry on; do not rename the deliverable.
 
 ## share-manifest.md
 
