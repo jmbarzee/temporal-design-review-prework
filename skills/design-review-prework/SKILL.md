@@ -124,7 +124,9 @@ Ask for the code paths **first**, then everything else, so your output-directory
 3. **Session flavor:** standard design review, cost/optimization session, or pre-production architecture check — and *the one thing they most want out of it*.
 4. **Output directory**, suggesting a concrete sibling of the path from #1 (e.g. `../temporal-prework/`). Never inside the repo under review.
 
-Do not ask the full intake yet; it lands in Phase 3, once you can ask informed questions.
+**Ask for the operational numbers now, not later.** Point the user at `reference/sa-questions.md` sections 4 and 5 and say plainly why they come first: those numbers are the ones code cannot supply, they decide whether anything you find matters, and **they change what you should go looking for**. Twenty minutes with whoever owns the dashboards, before you scan, is worth more than any amount of reading afterward. Reviewers of earlier bundles were blunt: the expensive half was left empty while the cheap half ran long.
+
+If the user cannot get them now, proceed — but record that the envelope is unfilled and expect to re-ask at Phase 6 with the cost known. Do not ask the remaining intake yet; it lands in Phase 3.
 
 ## Phase 2 — Survey + explore
 
@@ -191,14 +193,26 @@ Then **verify their load-bearing claims** against the cited lines before those c
 
 Anything the code cannot show — deployment-time wiring, config-driven routing, services with no source available — goes to the gap ledger, not into guesswork.
 
+**A gap you could close by widening your own scope is not a gap.** Distinguish "outside my access" from "outside the focus I chose." The first is real; the second is a decision you may revisit. In one bundle the single most important unknown — the thresholds the customer's stated worry reduced to — sat one directory away in a repo the tool had already read, filed as a gap because the focus excluded it. When a fact turns out to be load-bearing, widen, read it, and note that you did.
+
+**Revisit decisions once their cost is known.** Scope exclusions and declined inputs get decided early, before anyone can price them. When research shows an excluded area or a declined number is blocking something important, re-open it. This is the structural pattern behind the costliest misses observed so far: *decisions made before their cost was knowable, never revisited once it was.*
+
 ### Choosing the toolchain
 
 - **Generic path (default):** your normal code tools, Mermaid diagrams per the diagram guide. If you hit an unfamiliar Temporal primitive and need doc-aligned framing for it, consult the official `temporal-developer` skill for that primitive specifically. Do not load it wholesale as preparation — it is written for someone building an app, not reviewing one.
 - **`twf` path (experimental, opt-in):** only if Phase 0 verified the toolchain. It pays off when the review's questions are about **mechanics** — exact option values, control flow, child-workflow semantics — and much less when they are about topology or scale. See [reference/twf-path.md](reference/twf-path.md).
 
-## Phase 5 — Fan-in + validate
+## Phase 5 — Compose, assemble, validate
 
-Assemble the bundle per [reference/output-spec.md](reference/output-spec.md).
+**First, run the composition pass** in [reference/composition-pass.md](reference/composition-pass.md). Mandatory, and the highest-value step in the pipeline. Per-slice research produces facts; nothing composes them, and every reviewer who worked from an earlier bundle reported that their most serious findings were products of facts the bundle already held, sitting in different sections — one pair two sentences apart in the same paragraph. The pass is mechanical: it pairs unboundedness with the limits it consumes, and facts that share a resource, lifecycle, or failure path. It **asserts nothing**. Also add a falsifier to every inference, and give the gap ledger its related-entries column.
+
+Then assemble the bundle per [reference/output-spec.md](reference/output-spec.md).
+
+**Then run a self-consistency pass over your own output.** Reviewers found bundles contradicting themselves on numbers their own arithmetic depended on: a payload limit stated three ways, a timeout 20s in one file and 30s in another, a package count of 11 in one section and 19 in another. Nothing checks prose, so check it yourself — find every limit, timeout, count, and threshold you cite more than once, and reconcile or explain each disagreement. A number that appears twice with two values is worse than one that appears once.
+
+**Provenance must travel with the claim.** A caveat in the gap ledger does not protect a reader of the report; nobody cross-reads a 28-row ledger. If a claim was verified against a different version, environment, or stale artifact, the marker goes **inline, beside the claim, every time it appears**. `*(observed)*` must mean confirmed; anything weaker carries its qualifier.
+
+**Every zero-count ships the command that produced it.** A negative is the one claim a reader can never confirm from a citation — only re-run. "No modern versioning primitives anywhere" is load-bearing and unverifiable unless the search travels with it. Same for "no caller found", "no schedule starting this", "no cap enforced anywhere". State the search and its exclusions.
 
 **Then gate the diagrams. This step is mandatory and not optional judgment:**
 
@@ -216,11 +230,19 @@ Cheap structural scanning produces few gaps; research produces most of them. So 
 
 Put to the user the gaps they can actually close, prioritizing **code-fact questions** ("is this cap enforced anywhere?", "who sends this signal?") over metrics they have already said they don't have. A user answer closes the entry as *stated*; anything unanswered survives into the report's "Questions for the review."
 
-Do not re-ask what was already declined, and do not skip this gate on the assumption that the user has nothing to add — code-fact questions are answerable even when every scale number came back "unknown."
+**Re-ask anything whose cost you have now computed.** A decline that looked cheap at intake may by now be blocking several checks — and research often *manufactures* the most important missing number. One bundle derived "in-flight activities is roughly four times the cell count" against a fixed slot budget, then never asked what the cell count was. If your own findings generated a question, ask it here.
+
+**Classify declines by cost, not finality.** "I don't have access" is final; respect it. But "there is no single representative one" objects to the *shape* of the question, not the request — it argues against a canonical example and in favor of several. Re-ask the **transformed** question exactly once ("understood that it varies — could you bring one from your largest cluster?"), then stop. Do not nag; equally, do not accept a reasoned decline whose reasoning does not support its conclusion.
+
+**Look for the substitute yourself before asking.** Recorded histories, test fixtures, and committed sample data often sit in the repo you already read. A reviewer found real event histories in a `testdata` directory after the bundle had declined the execution-history ask as unavailable, and called quantifying one "the single highest-return hour of prework left on the table."
+
+**Route every question to the owner who can answer it.** Never label maintainer questions as questions for the SA. An SA cannot tell you whether *your* unread config knob is intentional or *your* missing filter deliberate. Mislabeling wastes meeting time and, as one reviewer put it, "launders unfinished work as delegated work" — making the bundle read as more complete than it is. Tag each open item with its likely owner: the SA, the code's maintainers, a platform or ops team, or the customer.
 
 ## Phase 7 — Report + handoff
 
 1. **Executive summary** at the top of `report.md`, leading with what the *customer* now has, then the system's defining characteristics — the facts an SA will orient on fastest — then what to send the SA. Characteristics, not concerns.
+
+   Also state where the research actually concentrated, and how that compares with the customer's stated concerns from intake. Both belong in the report; neither replaces the other.
 2. **The share manifest** — which files to share and what each reveals. Remind them to check the Temporal team can actually open what they send.
 3. **One logistics nudge on meeting length** if the agenda you built is deep: 30 minutes is tight for a real architecture discussion.
 4. **The representative-run nudge, conditionally.** A Namespace + Workflow ID is the highest-leverage, lowest-effort addition — *if it exists*. If the user declined it for a **structural** reason (no single nameable cluster, multi-tenant, pre-production), it is already recorded; **do not nudge again**. Only repeat the ask if they simply hadn't got to it.
