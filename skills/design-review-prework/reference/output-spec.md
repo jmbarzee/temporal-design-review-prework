@@ -36,7 +36,9 @@ Everything lands in the output directory chosen in Phase 1. Nothing is written a
    - child-workflow lifetime relationships (parent close policy, await-start vs await-result)
    - where the code's own comments record intent, a caveat, or a `TODO` — quoted and attributed
 
-   State each of these as a fact. Do not grade it, do not rank it by severity, and do not credit it. Crediting good design is the same boundary violation as flagging bad design — both are the SA's call. **This tool prepares the review; it does not perform it.**
+   Where a **hard-defined defect** appears (SKILL.md "The one carve-out"), add its one-line `**Signal:**` immediately after the mechanism it belongs to. Signals never get their own section and are never ordered by severity — that would rebuild the findings list this tool exists not to produce.
+
+   Otherwise state each of these as a fact. Do not grade it, do not rank it by severity, and do not credit it. Crediting good design is the same boundary violation as flagging bad design — both are the SA's call. **This tool prepares the review; it does not perform it.**
 5. **External architecture** — the systems around Temporal and how each relates to the workflows (one hop out); pointer to the external diagram. Do not restate §2's deployment facts.
 6. **Operational envelope** — the stated scale, growth, and cost numbers from intake, unknowns included, each marked stated or unknown. Add an "assume when advising" line for anything the SA should not guess at (e.g. "self-hosted, DB varies — don't assume one backend").
 7. **Questions for the review** — the agenda: the user's own questions first, then unresolved gap-ledger entries phrased as questions. Make every entry specific.

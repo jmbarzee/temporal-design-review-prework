@@ -28,7 +28,31 @@ So: **state mechanisms and values; never grade them.**
 
 Banned vocabulary in every bundle file: *risk, concern, hazard, bug, anti-pattern, best practice, should, ought, well-built, correct, wrong, better, worse, deserves attention, worth flagging, red flag*. If you catch yourself reaching for one, you have found something worth **stating precisely** or worth **asking as a question** instead.
 
-Three legitimate exceptions:
+### The one carve-out: soft signals for hard-defined defects
+
+Some defects are defined **without reference to anyone's opinion**. Where that is true, staying silent underserves the customer, so you may add a short, marked **signal** — never a finding, never a recommendation.
+
+A defect qualifies as hard-defined only when it is one of these:
+
+- **The code contradicts itself.** Two values the code's own comment says must be kept in sync, that aren't.
+- **The code contradicts its own documentation** — a proto marked deprecated in favor of a path that isn't wired, a comment describing behavior the code does not implement.
+- **A stated invariant is unenforced.** Two collections sorted independently and then paired by index, with no length or identity check.
+- **A declared control has no effect.** A cap that is defined and assigned but never read; a config field with no producer; a value that cannot take effect because state carries past it.
+- **Documented platform semantics are not met** — cancellation that does not propagate where the SDK defines that it must.
+
+Everything else is a judgment: whether a timeout is too long, whether a pattern is right, whether a boundary is well drawn, whether something is "well built." Those stay neutral, always.
+
+How to write a signal:
+
+1. **Mechanism first, in full.** The facts and exact values with citations, as normal.
+2. **Then one line, marked `**Signal:**`**, naming the contradiction in neutral terms.
+3. **No fix, no severity, no ranking.** "Signal: `MaxExecutionCountBatchOperationPerNamespace` is assigned *(observed: service.go:401)* and never read anywhere in the repo." Not "this should be enforced."
+4. **If confirming it requires running code, it is a gap, not a signal.** "A `go build` would settle this" is a ledger entry.
+5. **Keep them rare.** More than a handful in one report means you have drifted back into reviewing. Do not collect them into a section or order them by severity — each sits with the mechanism it belongs to.
+
+The test before writing one: *would two competent engineers who disagree about architecture still both call this wrong?* If not, it is a judgment — state the mechanism and stop.
+
+Three further exceptions:
 
 - **The code's own judgment is a fact about the code.** A `TODO`, a comment saying a path can starve, a `deprecated` marker: quote it and attribute it to the source. That is observation, not assessment.
 - **Questions are not verdicts.** Report §7 exists so the customer can put their own questions to the SA. "Is the cross-namespace activity pattern the right shape here?" is the customer asking; it is not you answering.
