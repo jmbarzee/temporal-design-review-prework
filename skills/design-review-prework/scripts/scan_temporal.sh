@@ -12,7 +12,7 @@ cd "$R" 2>/dev/null || { echo "cannot enter $R" >&2; exit 1; }
 
 # Paths whose contents are generated, vendored, or test doubles. Anything matching
 # is excluded from every count below, and the exclusion is reported.
-EXCL='/vendor/|/node_modules/|\.pb\.go$|\.pb\.gw\.go$|_generated\.go$|\.gen\.go$|/api/gen/|/gen/|/mocks?/|_mock\.go$|/testdata/|\.pb\.validate\.go$'
+EXCL='/vendor/|/node_modules/|\.pb\.go$|\.pb\.gw\.go$|_generated\.go$|\.gen\.go$|/api/gen/|/gen/|/mocks?/|_mock\.go$|/testdata/|\.pb\.validate\.go$|_test\.go$|_test\.py$|\.test\.tsx?$|/functionaltests?/|/tests?/'
 
 src() { git ls-files 2>/dev/null | grep -Ev "$EXCL" | grep -E "$1" || true; }
 n()   { [ -z "${1:-}" ] && { printf 0; return; }; printf '%s' "$(grep -c . <<<"$1")"; }
@@ -35,15 +35,19 @@ printf "   go-sdk=%s python-sdk=%s ts-sdk=%s java-sdk=%s\n" \
   "$(hits '@temporalio/' "$TS")" "$(hits 'io\.temporal\.' "$JAVA")"
 echo
 echo "-- worker construction (the topology seams; expect few)"
-printf "   worker.New=%s\n" "$(cnt 'worker\.New[A-Za-z]*\(' "$GO $TS $PY")"
+printf "   worker constructors=%s\n" "$(cnt '[A-Za-z_]*worker\.New[A-Za-z]*\(|NewAggregatedWorker\(' "$GO $TS $PY")"
 echo
 echo "-- REGISTRATION sites (the reliable workflow/activity inventory proxy)"
-printf "   RegisterWorkflow*=%s  RegisterActivity*=%s\n" \
-  "$(cnt 'Register[A-Za-z]*Workflow[A-Za-z]*\(' "$GO $TS $PY $JAVA")" \
-  "$(cnt 'Register[A-Za-z]*Activit[yi][A-Za-z]*\(' "$GO $TS $PY $JAVA")"
+printf "   RegisterWorkflow*=%s  RegisterActivity*=%s  (files with any registration=%s)\n" \
+  "$(cnt '\.Register[A-Za-z]*Workflow[A-Za-z]*\(' "$GO $TS $PY $JAVA")" \
+  "$(cnt '\.Register[A-Za-z]*Activit[yi][A-Za-z]*\(' "$GO $TS $PY $JAVA")" \
+  "$(hits '\.Register[A-Za-z]*(Workflow|Activit)[A-Za-z]*\(' "$GO $TS $PY $JAVA")"
 echo "   NOTE: registration sites are the inventory proxy. Raw function-signature"
 echo "         greps are NOT -- in a codegen-heavy repo they are dominated by"
 echo "         generated bindings and produce a meaningless count."
+echo "   NOTE: matched on ANY receiver (.RegisterWorkflow...), because a codebase may"
+echo "         alias the SDK import or hand components a Registry rather than a worker."
+echo "         Verify the idiom in one file before trusting these counts."
 echo
 echo "-- workflow starts (trigger surface)"
 printf "   ExecuteWorkflow=%s SignalWithStart=%s ExecuteChild=%s\n" \
@@ -71,3 +75,7 @@ for F in "$@"; do
 done
 echo
 echo "Report the exclusion count alongside any inventory number."
+echo "Tests are EXCLUDED from every count above. If a count still looks implausible,"
+echo "check how this repo constructs workers and registers types before using it --"
+echo "two independent runs found this script's raw totals inflated by aliased imports"
+echo "and registry indirection. A number you must discard is worse than no number."
