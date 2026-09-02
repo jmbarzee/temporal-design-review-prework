@@ -20,11 +20,11 @@ So: **state mechanisms and values; never grade them.**
 
 | Write this | Not this |
 |---|---|
-| "`start_to_close_timeout` is 175200h (20 years) *(observed: workflow.go:130)*" | "an effectively infinite timeout, which is risky" |
-| "The retry policy sets no `maximum_attempts` *(observed: workflow.go:133)*" | "unbounded retries — a concern" |
-| "`Init` does not rebuild the semaphore when `MaxConcurrency` changes *(observed: concurrency_limiter.go:66)*; state carries across continue-as-new *(observed: runner.go:335)*" | "a latent bug: config edits never take effect" |
-| "Heartbeat cadence is derived as `HeartbeatTimeout / 2` *(observed: heartbeat.go:14)*" | "well built — they derive it rather than hardcoding" |
-| "Refill uses `math.Min(period, 1.0)` as the denominator *(observed: runner_options.go:90)*" | "almost certainly meant `math.Max`" |
+| "`start_to_close_timeout` is 175200h (20 years) *(observed: charge/workflow.go:130)*" | "an effectively infinite timeout, which is risky" |
+| "The retry policy sets no `maximum_attempts` *(observed: charge/workflow.go:133)*" | "unbounded retries — a concern" |
+| "`Init` does not rebuild the semaphore when `MaxConcurrency` changes *(observed: limiter/limiter.go:66)*; state carries across continue-as-new *(observed: limiter/runner.go:335)*" | "a latent bug: config edits never take effect" |
+| "Heartbeat cadence is derived as `HeartbeatTimeout / 2` *(observed: sync/heartbeat.go:14)*" | "well built — they derive it rather than hardcoding" |
+| "Refill uses `math.Min(period, 1.0)` as the denominator *(observed: limiter/options.go:90)*" | "almost certainly meant `math.Max`" |
 
 Banned vocabulary in every bundle file: *risk, concern, hazard, bug, anti-pattern, best practice, should, ought, well-built, correct, wrong, better, worse, deserves attention, worth flagging, red flag*. If you catch yourself reaching for one, you have found something worth **stating precisely** or worth **asking as a question** instead.
 
@@ -46,7 +46,7 @@ How to write a signal:
 
 1. **Mechanism first, in full.** The facts and exact values with citations, as normal.
 2. **Then one line, marked `**Signal:**`**, naming the contradiction in neutral terms.
-3. **No fix, no severity, no ranking.** "Signal: `MaxExecutionCountBatchOperationPerNamespace` is assigned *(observed: service.go:401)* and never read anywhere in the repo." Not "this should be enforced."
+3. **No fix, no severity, no ranking.** "Signal: the `MaxBatchTargets` limit is assigned *(observed: config/service.go:401)* and never read anywhere in the repo." Not "this should be enforced."
 4. **If confirming it requires running code, it is a gap, not a signal.** "A `go build` would settle this" is a ledger entry.
 5. **Keep them rare.** More than a handful in one report means you have drifted back into reviewing. Do not collect them into a section or order them by severity — each sits with the mechanism it belongs to.
 
@@ -72,9 +72,9 @@ Store **verified findings with their correction notes** — not raw subagent ret
 
 **Every fact is observed or stated.** *Observed* = seen in code, and it carries a `file:line` reference. *Stated* = the user told you. Use these exact inline forms so the SA can audit at a glance:
 
-- `*(observed: service/worker/batcher/workflow.go:144)*`
+- `*(observed: internal/charge/workflow.go:144)*`
 - `*(stated)*`
-- `*(effective: api/gen/infra/v1/infra_temporal.pb.go:2104; unset at call site)*`
+- `*(effective: api/gen/billing/v1/billing.pb.go:2104; unset at call site)*`
 
 The third form matters more than it looks. A value that a generated wrapper, proto annotation, or server default supplies — where the call site sets nothing — is neither observed at the call site nor stated by the user. Citing it as observed at the call site is false; omitting it loses the behavior. **Never report a default as if the code set it**, and always say where the effective value actually comes from.
 
@@ -88,7 +88,7 @@ The protocol:
 2. **Keep both.** Record the observation with its `file:line` and keep the stated premise, marked superseded. Never silently delete what the user said; they may know something the code doesn't show.
 3. **Surface it prominently** — the executive summary, not a footnote — because it may change the shape of the review.
 4. **Gate the consequences behind the user's confirmation.** Ask them to confirm or correct before letting the correction drive "assume when advising" guidance. They may have meant a different component.
-5. **State it without scoring it.** "The code exits when the pending set is empty *(observed: server.go:227)*; the team described these workflows as long-lived *(stated)*" — not "your premise was wrong."
+5. **State it without scoring it.** "The workflow exits when its pending set is empty *(observed: internal/entity/loop.go:227)*; the team described these workflows as long-lived *(stated)*" — not "your premise was wrong."
 
 **Verify before you repeat.** Any claim from a subagent that lands in the report or a diagram must be spot-checked against the cited `file:line` first. A cheap read is the difference between a report and a rumor — and an unverified claim in front of an SA costs the customer credibility.
 
