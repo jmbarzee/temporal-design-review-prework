@@ -7,6 +7,33 @@ description: Prepare the prework bundle for a Temporal design review or optimiza
 
 You are helping a developer prepare for a **design review with a Temporal Solutions Architect (SA)**. The single highest-leverage prework artifact is a real architecture diagram — not just "the Temporal bits," but the whole system around Temporal — paired with answers to a short list of questions the SA will otherwise spend meeting time asking. A thin submission ("4 boxes and lines") turns the review into generic Temporal education; a good one lets the SA walk in with a pre-built agenda targeted at this system.
 
+## What this produces: a map, not a review
+
+**You are drawing a map.** Borders, capital cities, industry centers, the roads between them, and honest blank space where the survey didn't reach. A map does not tell you which city is well governed.
+
+The subjective assessment — is this design good, is this pattern right, is this a risk — belongs to the SA and their own review tooling, which is built for it and accountable for it. Your job is to produce the **source material** that makes their assessment fast and accurate. Two reasons this boundary is strict:
+
+1. **A wrong verdict is worse than no verdict.** You are reading unfamiliar code without the customer's operational context. An SA who has to first undo your conclusions is slower than one handed clean facts.
+2. **It changes how the customer arrives.** A customer who has been told "you have three latent bugs" arrives defensive or alarmed. A customer handed an accurate map of their own system arrives ready to talk.
+
+So: **state mechanisms and values; never grade them.**
+
+| Write this | Not this |
+|---|---|
+| "`start_to_close_timeout` is 175200h (20 years) *(observed: workflow.go:130)*" | "an effectively infinite timeout, which is risky" |
+| "The retry policy sets no `maximum_attempts` *(observed: workflow.go:133)*" | "unbounded retries — a concern" |
+| "`Init` does not rebuild the semaphore when `MaxConcurrency` changes *(observed: concurrency_limiter.go:66)*; state carries across continue-as-new *(observed: runner.go:335)*" | "a latent bug: config edits never take effect" |
+| "Heartbeat cadence is derived as `HeartbeatTimeout / 2` *(observed: heartbeat.go:14)*" | "well built — they derive it rather than hardcoding" |
+| "Refill uses `math.Min(period, 1.0)` as the denominator *(observed: runner_options.go:90)*" | "almost certainly meant `math.Max`" |
+
+Banned vocabulary in every bundle file: *risk, concern, hazard, bug, anti-pattern, best practice, should, ought, well-built, correct, wrong, better, worse, deserves attention, worth flagging, red flag*. If you catch yourself reaching for one, you have found something worth **stating precisely** or worth **asking as a question** instead.
+
+Three legitimate exceptions:
+
+- **The code's own judgment is a fact about the code.** A `TODO`, a comment saying a path can starve, a `deprecated` marker: quote it and attribute it to the source. That is observation, not assessment.
+- **Questions are not verdicts.** Report §7 exists so the customer can put their own questions to the SA. "Is the cross-namespace activity pattern the right shape here?" is the customer asking; it is not you answering.
+- **On the `twf` path, the toolchain reflection may judge the notation** — never the customer's system. See the twf-path reference.
+
 The output is equally the **customer's own artifact**: an architecture document and diagram set their team keeps, whether or not the meeting happens. Frame everything you produce for the customer first; the review is the occasion, not the owner.
 
 ## Ground rules
@@ -81,10 +108,10 @@ Keep this gate to two things: **scope confirmation** and **intake**. If the `twf
 
 Deep exploration of the confirmed scope, along two perspectives. Both matter; [reference/diagram-guide.md](reference/diagram-guide.md) defines what "good" looks like for each.
 
-1. **Internal to Temporal** — the shape of each in-focus workflow: trigger, major steps, activities, child workflows, signals, queries, updates, timers, retries and failure paths, continue-as-new, final outcomes. Plus worker topology: which workers, which task queues, what is co-hosted.
+1. **Internal to Temporal** — the shape of each in-focus workflow: trigger, major steps, activities, child workflows, signals, queries, updates, timers, retries and failure paths, continue-as-new, final outcomes. Plus worker topology: which workers, which task queues, what is co-hosted. Capture **exact values** — timeouts, retry policies, concurrency limits, page sizes — because precise numbers are what let an SA judge quickly. Record the number; do not rate it.
 2. **External to Temporal** — the system *around* it: databases, queues, third-party APIs, user-facing services, and where Temporal sits among them. **Scoping rule: explore a non-Temporal component only to answer "how does this relate to my workflows?"** One hop out from workflow/activity/starter code is the boundary; note what lies beyond as a labeled external box and stop. Do not map the customer's whole company.
 
-**Fan out with subagents when scope is large** (multiple services, giant workflows, more than ~3 focus workflows): one per bounded slice. Give each subagent, verbatim: the read-only rule, the one-hop external scoping rule, and an **output budget** — a structured summary of conclusions with `file:line` citations, roughly one page, never raw file dumps or exhaustive line-by-line inventories. Then **verify their load-bearing claims** against the cited lines before those claims enter the report.
+**Fan out with subagents when scope is large** (multiple services, giant workflows, more than ~3 focus workflows): one per bounded slice. Give each subagent, verbatim: the read-only rule, the one-hop external scoping rule, the **map-not-review rule and its banned vocabulary**, and an **output budget** — a structured summary of conclusions with `file:line` citations, roughly one page, never raw file dumps or exhaustive line-by-line inventories. Then **verify their load-bearing claims** against the cited lines before those claims enter the report.
 
 Anything the code cannot show — deployment-time wiring, config-driven routing, services with no source available — goes to the gap ledger, not into guesswork.
 
@@ -117,7 +144,7 @@ Do not re-ask what was already declined, and do not skip this gate on the assump
 
 ## Phase 7 — Report + handoff
 
-1. **Executive summary** at the top of `report.md`, leading with what the *customer* now has, then the most review-worthy observations, then what to send the SA.
+1. **Executive summary** at the top of `report.md`, leading with what the *customer* now has, then the system's defining characteristics — the facts an SA will orient on fastest — then what to send the SA. Characteristics, not concerns.
 2. **The share manifest** — which files to share and what each reveals. Remind them to check the Temporal team can actually open what they send.
 3. **One logistics nudge on meeting length** if the agenda you built is deep: 30 minutes is tight for a real architecture discussion.
 4. **The representative-run nudge, conditionally.** A Namespace + Workflow ID is the highest-leverage, lowest-effort addition — *if it exists*. If the user declined it for a **structural** reason (no single nameable cluster, multi-tenant, pre-production), it is already recorded; **do not nudge again**. Only repeat the ask if they simply hadn't got to it.

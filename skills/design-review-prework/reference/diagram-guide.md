@@ -56,6 +56,10 @@ Use `flowchart TD`, or a sequence diagram when inter-service back-and-forth is t
 
 **Internal and family diagrams are exempt from the 25-node cap**, and label-dense nodes are explicitly blessed here: carrying exact timeouts, retry policies, and policy values in the node is more useful to an SA than a clean-looking diagram that omits them. Past ~40 nodes, reconsider.
 
+## Diagrams describe, they don't editorialize
+
+Node and edge labels carry names, roles, and exact values — never assessments. `"BatchActivity<br/>start_to_close 20 years, retry unbounded"` is a good label; `"BatchActivity (risky timeout!)"` is not. No warning icons, no red-for-bad coloring, no "⚠" annotations. Use color and shape only to distinguish *kinds* of thing (activity, child workflow, signal, external system), as the legend declares.
+
 ## Marking uncertainty
 
 A component you inferred but could not verify gets a dashed edge or a `?` in its quoted label, **and** a gap-ledger entry. Never silently draw a guess as fact. Same evidence rule as the report: observed or stated, nothing else.
