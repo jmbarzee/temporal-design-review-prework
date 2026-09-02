@@ -80,9 +80,21 @@ def lint(path):
         add(0, "no diagram type declaration (need e.g. 'flowchart TD')")
     kind_name = kind.group(1) if kind else ""
 
+    subgraph_ids = set(re.findall(r'^\s*subgraph\s+([A-Za-z][\w]*)', src, re.M))
+    # span of the legend subgraph, so its shape samples don't consume the node budget
+    legend_span = None
+    m_leg = re.search(r'^([ \t]*)subgraph\s+\w*\s*\[\s*"?[^"\]]*legend[^\n]*$', src, re.I | re.M)
+    if m_leg:
+        rest = src[m_leg.end():]
+        m_end = re.search(r'^[ \t]*end\b', rest, re.M)
+        legend_span = (m_leg.start(), m_leg.end() + (m_end.end() if m_end else len(rest)))
+
     node_ids = set()
     for ln, node_id, opener, label in find_labels(src):
-        node_ids.add(node_id)
+        pos = src.find(node_id)
+        in_legend = bool(legend_span) and legend_span[0] <= pos <= legend_span[1]
+        if node_id not in subgraph_ids and not in_legend:
+            node_ids.add(node_id)
         stripped = label.strip()
         quoted = stripped.startswith('"') and stripped.endswith('"') and stripped.count('"') == 2
         if not quoted:
@@ -103,13 +115,19 @@ def lint(path):
         m = re.search(r'--+\s*([^-|>"\n][^->\n]*?)\s*--+>', line)
         if m and not m.group(1).strip().startswith('"'):
             add(i, f'unquoted edge label {m.group(1).strip()!r} -> use -- "text" -->')
-    # legend must be IN-CANVAS (a subgraph), never a %% comment: comments vanish when rendered
-    if not re.search(r'subgraph\s+\w*\s*\[\s*"?[^"\]]*legend', src, re.I):
+    # legend must be IN-CANVAS, never a %% comment: comments vanish when rendered.
+    # sequenceDiagram cannot hold a subgraph, so a `Note over ...` legend is legal there.
+    is_seq = kind_name.startswith("sequenceDiagram")
+    has_legend = bool(re.search(r'subgraph\s+\w*\s*\[\s*"?[^"\]]*legend', src, re.I))
+    if is_seq:
+        has_legend = has_legend or bool(re.search(r'^\s*Note\s+(over|left|right)[^\n]*legend', src, re.I | re.M))
+    if not has_legend:
         if re.search(r'(?i)legend', raw_src):
             add(0, 'legend is a %% comment (or unrecognized): it VANISHES when rendered -> '
                    'make it an in-canvas `subgraph legend ["Legend"]` of shape samples')
         else:
-            add(0, 'no legend -> add an in-canvas `subgraph legend ["Legend"]` of shape samples')
+            add(0, 'no legend -> add an in-canvas `subgraph legend ["Legend"]` of shape samples'
+                   + (' (or, in a sequenceDiagram, a `Note over ...: Legend ...`)' if is_seq else ''))
     # size: topology diagrams cap at 25; workflow-chain diagrams are exempt
     n = len(node_ids)
     role = re.search(r'%%\s*role:\s*(topology|workflow)', raw_src, re.I)

@@ -11,11 +11,10 @@ Everything lands in the output directory chosen in Phase 1. Nothing is written a
   diagrams/
     external-architecture.mmd  # + .png/.svg when Phase 0 produced a renderer
     external-architecture-<domain>.mmd  # ...or split by domain when over the 25-node cap
-    <workflow>-internal.mmd    # one per in-focus workflow...
-    <family>-internal.mmd      # ...or one per workflow family (see diagram guide)
+    <family>-internal.mmd      # one per in-focus workflow or workflow family
   .work/                       # scratch: raw subagent returns, notes. Not shared.
-  twf/                         # twf path only
-    <domain>/*.twf  deploy/topology.twf  twf-retro.md
+  twf/                         # twf path only: one flat package
+    <slice>.twf  topology.twf  twf-retro.md
 ```
 
 ## report.md template

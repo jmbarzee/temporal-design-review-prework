@@ -42,12 +42,17 @@ The output is equally the **customer's own artifact**: an architecture document 
 
 **Egress is confined to Phase 0.** Installing a diagram renderer from a public package registry is permitted in Phase 0, with the user's explicit consent. From Phase 1 onward: no network calls, no web search unless the user opts in when offered in Phase 1, and **no source code, diagram, or report content leaves the machine — ever**. Never install a renderer later to satisfy a rendering requirement; if Phase 0 produced none, ship diagram source and say so.
 
-**Scratch space is sanctioned.** Keep working notes, raw subagent returns, and intermediate research in `<out>/.work/` (or a system temp directory). Do not hold large research payloads in context to avoid writing them down. `.work/` is excluded from the share manifest.
+**Scratch space is sanctioned.** Keep working notes and intermediate research in `<out>/.work/` (or a system temp directory, if the output directory does not exist yet). Do not hold large research payloads in context to avoid writing them down. `.work/` is excluded from the share manifest.
+
+Store **verified findings with their correction notes** — not raw subagent returns. Raw returns are the least useful thing to keep: they are long, unverified, and you will not reread them. A note recording "subagent claimed 1037, actual 174, it counted generated getters" is what lets you write an honest provenance line later. Write these notes in **report voice**, so §4 can be assembled by extraction rather than re-expressed from scratch.
 
 **Every fact is observed or stated.** *Observed* = seen in code, and it carries a `file:line` reference. *Stated* = the user told you. Use these exact inline forms so the SA can audit at a glance:
 
 - `*(observed: service/worker/batcher/workflow.go:144)*`
 - `*(stated)*`
+- `*(effective: api/gen/infra/v1/infra_temporal.pb.go:2104; unset at call site)*`
+
+The third form matters more than it looks. A value that a generated wrapper, proto annotation, or server default supplies — where the call site sets nothing — is neither observed at the call site nor stated by the user. Citing it as observed at the call site is false; omitting it loses the behavior. **Never report a default as if the code set it**, and always say where the effective value actually comes from.
 
 Never invent a fact about the system, and never let a plausible inference pass as observation. What you cannot determine goes in the gap ledger.
 
@@ -63,6 +68,8 @@ The protocol:
 
 **Verify before you repeat.** Any claim from a subagent that lands in the report or a diagram must be spot-checked against the cited `file:line` first. A cheap read is the difference between a report and a rumor — and an unverified claim in front of an SA costs the customer credibility.
 
+**Two reads, then it is a ledger entry.** If a single fact will not resolve after two honest attempts, stop and log it as an open question with what you tried and what would settle it. Chasing one line of code for six tool calls to arrive where the ledger would have taken you on call two is the most common avoidable cost in this whole pipeline. An honest unknown is cheaper than a guess and more useful than a long chase — and "a `go build` would settle this in seconds" is a perfectly good ledger entry, given you must not run it.
+
 **The gap ledger is continuous, not a phase.** From Phase 2 onward, every unknown goes into `gap-ledger.md` the moment you meet it: what is missing, why the review cares, what would close it. Never block on a gap — "we could not see the billing service; here is what its callers imply" is a deliverable.
 
 **Approximate answers are helpful.** Say this verbatim when asking intake questions. "Unknown" is an acceptable, recorded answer; never stall waiting for a number.
@@ -75,7 +82,7 @@ The protocol:
 
 The only phase where egress is allowed. Do this before touching any code.
 
-1. **Check for a Mermaid renderer**, in order: `mmdc --version` (the `@mermaid-js/mermaid-cli` package), then `docker` (image `minlag/mermaid-cli`).
+1. **Check for a Mermaid renderer**, in order: `mmdc --version` (the `@mermaid-js/mermaid-cli` package), then the Docker *image* — `docker images | grep mermaid`, not merely whether the daemon runs. A running daemon without the image means nothing can render yet, and recording "renderer available" on that basis is wrong.
 2. **If none is present, offer to install one, with the reason** — not as a bare yes/no. Say what it buys: a rendered PNG/SVG is what actually gets pasted into an intake form, a deck, or a ticket, and it proves the diagram parses; unrendered source may simply not open for the SA. Offer `npx -y @mermaid-js/mermaid-cli` (no global install) or a global `npm i -g @mermaid-js/mermaid-cli`, note it's a one-time public-registry download of a headless-browser-backed renderer, and say plainly that declining is fine — the bundle still ships valid diagram source that renders at mermaid.live.
 3. **Record the outcome.** The renderer's presence decides whether Phase 5 can *prove* the diagrams render or only lint them.
 Nothing in this phase reads customer code. Once it ends, the egress window closes.
@@ -116,11 +123,15 @@ scripts/scan_temporal.sh /path/to/repo internal/workflows/foo
 - Workflow and activity definitions; entry points (client starters, schedules, Nexus operations, signal senders).
 - Immediate external neighbors: databases, queues, third-party APIs, internal services touched from activities or from code that starts workflows.
 
-Minutes, not hours. Do not read handler bodies yet. This scan doubles as the report's full workflow inventory, so note every workflow you see, including ones that will fall out of focus.
+Minutes, not hours. Do not read handler bodies yet.
+
+**Inventory granularity scales with the target.** Under roughly 50 workflows, inventory them individually — that becomes the report's inventory table. Above that, **inventory at domain level** (one row per domain, service, or worker with a count), and say in the report that you did. A per-workflow table of 800 rows is neither possible nor useful, and attempting it is wasted effort.
 
 ## Phase 3 — Confirm scope + intake
 
 Present a **succinct list** of what you found — each service/domain/worker with a one-phrase description — and ask the user to confirm, correct, and **pick a focus**.
+
+**At scale, propose rather than enumerate.** When there are dozens of domains, a flat list is unusable. Offer **numbered candidate focus areas** — grouped into coherent end-to-end paths ("the namespace provisioning spine: this CP domain plus that IP domain") — and state an explicit recommendation with your reasoning, including what you would leave out and why. Users pick from a shortlist far more readily than they carve one from an inventory.
 
 Ask the **maturity question** here too, per `reference/maturity-signals.md` — present the git signals, ask where the user places the system on the prototype-to-production spectrum, and ask whether the *focus area* is at the same stage as the repo overall. Their answer wins; if it disagrees with the signals, record both without adjudicating.
 
@@ -139,7 +150,9 @@ Deep exploration of the confirmed scope, along two perspectives. Both matter; [r
 
 **When a dependency is the same technology as the system under review, label it explicitly to prevent conflation.** A system that both uses a technology and exposes it as a product feature will have two unrelated surfaces that look identical in a diagram; merging them is a serious error in front of an SA. Name each one for its role ("the platform's own control API" versus "the customer-facing feature of the same name") and keep them as separate nodes.
 
-**Fan out with subagents when scope is large** (multiple services, giant workflows, more than ~3 focus workflows): one per bounded slice. Give each subagent, verbatim: the read-only rule, the one-hop external scoping rule, the **map-not-review rule and its banned vocabulary**, an **output budget** — a structured summary of conclusions with `file:line` citations, roughly one page, never raw file dumps or exhaustive line-by-line inventories — plus all of the following:
+**Re-test your Phase 2 premise against the first focus slice before fanning out.** A cheap scan produces sweeping generalizations ("this is all proto-generated codegen"), and a wrong one propagates verbatim into every subagent prompt you write. Confirm the premise holds on one slice first; a premise that survives contact is worth handing out, and one that doesn't would have poisoned the whole fan-out. Your own generalizations need verification exactly as much as a subagent's claims do.
+
+**Fan out with subagents when scope is large** (multiple services, giant workflows, more than ~3 focus workflows): one per bounded slice. **Use the ready-made brief in [reference/subagent-prompt.md](reference/subagent-prompt.md)** — copy it verbatim and fill in the slice name, absolute paths, and numbered questions. Do not re-author it per run. It already carries: the read-only rule, the one-hop external scoping rule, the **map-not-review rule and its banned vocabulary**, the set-vs-defaulted rule, generated-code exclusion, evidence labels, the stop rule, "finding nothing is a valid finding", and an **output budget** — a structured summary of conclusions with `file:line` citations, roughly one page, never raw file dumps or exhaustive line-by-line inventories — plus all of the following:
 
 - **A numbered question list** specific to that slice, so returns are comparable and you can tell what went unanswered.
 - **Absolute paths**, with an explicit instruction not to use relative ones — a subagent's working directory may not be what you assume.

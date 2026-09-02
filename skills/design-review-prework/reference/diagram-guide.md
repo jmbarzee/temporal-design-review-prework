@@ -6,6 +6,8 @@ Two diagram types are required. They answer different questions; never merge the
 
 Every diagram must pass `scripts/lint_diagrams.py` (Phase 5). The rules below are what it checks.
 
+**Declare the diagram's role on the first line** — `%% role: topology` or `%% role: workflow`. The linter requires it, and the node cap depends on it. It is a declaration and not an inference from the filename, so a topology diagram named `something-internal.mmd` still gets the topology cap.
+
 ## Mermaid safe subset (non-negotiable — this is what keeps diagrams renderable)
 
 - **Quote every node label.** `api["Order API"]`, never `api[Order API]`. An unquoted label containing a comma, colon, parenthesis, slash, or a line break **fails to parse**, and you will not see the failure without a renderer.
@@ -27,6 +29,13 @@ flowchart LR
   end
 ```
 
+**Sequence diagrams are the exception**, because Mermaid `sequenceDiagram` cannot contain a `subgraph`. There, use a note instead, and the linter accepts it:
+
+```mermaid
+sequenceDiagram
+    Note over A,B: Legend - solid = call, dashed = poll result
+```
+
 Comments above the diagram are still useful for provenance (source paths, date) — just never for the legend.
 
 ## Diagram 1 — External architecture (exactly one)
@@ -42,7 +51,9 @@ Must show:
 
 Use `flowchart LR` with subgraphs for *your services*, *Temporal*, *workers*, and *external dependencies*.
 
-**Hard cap: 25 nodes.** Over that, split by domain — an unreadable diagram is a missing diagram.
+**Hard cap: 25 nodes**, and over that, split into `external-architecture-<domain>.mmd` per domain — an unreadable diagram is a missing diagram.
+
+**What counts toward the cap:** real components only. Subgraph containers and the legend's shape samples are scaffolding and are excluded, so the 25 is a genuine budget of 25 things in the system, not 25 lines of Mermaid.
 
 ## Diagram 2 — Internal workflow shape (one per in-focus workflow *or family*)
 
@@ -60,6 +71,8 @@ Use `flowchart TD`, or a sequence diagram when inter-service back-and-forth is t
 
 Node and edge labels carry names, roles, and exact values — never assessments. `"BatchActivity<br/>start_to_close 20 years, retry unbounded"` is a good label; `"BatchActivity (risky timeout!)"` is not. No warning icons, no red-for-bad coloring, no "⚠" annotations. Use color and shape only to distinguish *kinds* of thing (activity, child workflow, signal, external system), as the legend declares.
 
-## Marking uncertainty
+## Uncertainty goes in the ledger, not the drawing
 
-A component you inferred but could not verify gets a dashed edge or a `?` in its quoted label, **and** a gap-ledger entry. Never silently draw a guess as fact. Same evidence rule as the report: observed or stated, nothing else.
+A component you inferred but could not verify gets a **gap-ledger entry**, not a dashed border or a `?`. The ledger carries the reason, what would close it, and who might know — a dashed line carries none of that, and the ledger is mandatory anyway. Keep the drawing to what you can state, and let the blank space be explicit in prose.
+
+Same evidence rule as the report: observed, stated, or effective — nothing else.
