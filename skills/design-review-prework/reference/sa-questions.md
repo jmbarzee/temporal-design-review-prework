@@ -11,6 +11,9 @@ Ask these as one block, not one at a time. Expect **partial answers** — that i
 - Where does Temporal fit in the overall product?
 
 ## 2. SDK and build status
+
+**Stage first.** The maturity question from `reference/maturity-signals.md` is asked alongside these, and its answer decides which of the items below are even worth asking. A prototype makes §3 (representative run) and most of §6 (cost/volume) moot; mature production makes them the most valuable lines in the bundle. Ask the stage question, then prune.
+
 - Which SDK(s)? (usually observable — confirm)
 - How built-out is it? Planning / early-stage with placeholders / running in staging / production. Nuance welcome ("workflow logic built and tested, external calls still stubbed" is a great answer).
 

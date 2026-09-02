@@ -83,9 +83,11 @@ Ask for the code paths **first**, then everything else, so your output-directory
 
 Do not ask the full intake yet; it lands in Phase 3, once you can ask informed questions.
 
-## Phase 2 — Explore
+## Phase 2 — Survey + explore
 
-A cheap structural scan from the lead paths — **enumerate, don't understand**:
+**First, establish the target's stage.** Run the cheap git survey from [reference/maturity-signals.md](reference/maturity-signals.md) — git metadata only, seconds per repo — and carry a one-line summary of what it suggests into the Phase 3 gate, where you ask the user to confirm or correct it. Stage is context, never a grade, and it **calibrates the whole run**: what you ask for, how deep you go, and which intake items are moot. A prototype has no representative run to give you; a mature production system has real numbers worth chasing hard.
+
+**Then a cheap structural scan** from the lead paths — **enumerate, don't understand**:
 
 - Temporal SDK imports; which SDK(s) and languages.
 - Worker construction and registration wiring (`worker.New` + `Register*` in Go, equivalents elsewhere) → which workers host which workflows/activities on which task queues.
@@ -98,7 +100,9 @@ Minutes, not hours. Do not read handler bodies yet. This scan doubles as the rep
 
 Present a **succinct list** of what you found — each service/domain/worker with a one-phrase description — and ask the user to confirm, correct, and **pick a focus**.
 
-Then ask the intake questions from [reference/sa-questions.md](reference/sa-questions.md), **skipping anything the scan already answered** (state the observed answer and ask them to confirm rather than re-asking). Remind them approximate answers are helpful.
+Ask the **maturity question** here too, per `reference/maturity-signals.md` — present the git signals, ask where the user places the system on the prototype-to-production spectrum, and ask whether the *focus area* is at the same stage as the repo overall. Their answer wins; if it disagrees with the signals, record both without adjudicating.
+
+Then ask the intake questions from [reference/sa-questions.md](reference/sa-questions.md), **skipping anything the scan already answered, and skipping anything the confirmed stage makes moot** (state the observed answer and ask them to confirm rather than re-asking). Remind them approximate answers are helpful.
 
 Keep this gate to two things: **scope confirmation** and **intake**. If the `twf` path is genuinely available (Phase 0 verified it), mention it in one line here; never spend a labeled section on it.
 
