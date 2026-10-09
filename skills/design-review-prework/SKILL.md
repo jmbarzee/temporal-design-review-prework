@@ -64,7 +64,7 @@ The output is equally the **customer's own artifact**: an architecture document 
 
 **Read-only against the customer's code.** Never modify, build, run, or execute anything in the codebase under review. The only paths you write to are the output directory and the scratch directory below.
 
-**Egress is confined to Phase 0.** Installing a diagram renderer from a public package registry is permitted in Phase 0, with the user's explicit consent. From Phase 1 onward: no network calls, no web search unless the user opts in when offered in Phase 1, and **no source code, diagram, or report content leaves the machine — ever**. Never install a renderer later to satisfy a rendering requirement; if Phase 0 produced none, ship diagram source and say so.
+**Egress is confined to Phase 0.** Installing tooling — the `twf` toolchain and a diagram renderer — is permitted in Phase 0, with the user's explicit consent. From Phase 1 onward: no network calls, no web search unless the user opts in when offered in Phase 1, and **no source code, diagram, or report content leaves the machine — ever**. Never install tooling later: anything not installed in Phase 0 stays uninstalled. Without a renderer, ship diagram source and say so; without the toolchain, say in the report that wiring claims were not machine-checked.
 
 **Scratch space is sanctioned.** Keep working notes and intermediate research in `<out>/.work/` (or a system temp directory, if the output directory does not exist yet). Do not hold large research payloads in context to avoid writing them down. `.work/` is excluded from the share manifest.
 
@@ -109,11 +109,13 @@ The only phase where egress is allowed. Do this before touching any code.
 1. **Check for a Mermaid renderer**, in order: `mmdc --version` (the `@mermaid-js/mermaid-cli` package), then the Docker *image* — `docker images | grep mermaid`, not merely whether the daemon runs. A running daemon without the image means nothing can render yet, and recording "renderer available" on that basis is wrong.
 2. **If none is present, offer to install one, with the reason** — not as a bare yes/no. Say what it buys: a rendered PNG/SVG is what actually gets pasted into an intake form, a deck, or a ticket, and it proves the diagram parses; unrendered source may simply not open for the SA. Offer `npx -y @mermaid-js/mermaid-cli` (no global install) or a global `npm i -g @mermaid-js/mermaid-cli`, note it's a one-time public-registry download of a headless-browser-backed renderer, and say plainly that declining is fine — the bundle still ships valid diagram source that renders at mermaid.live.
 3. **Record the outcome.** The renderer's presence decides whether Phase 5 can *prove* the diagrams render or only lint them.
+4. **Check for the `twf` toolchain, and recommend it.** Run `twf --version`. If it is absent, recommend installing it and **offer to help** — a confirm-and-assist, not a yes/no that ends the path. It gives the run the one check prose cannot do for itself: deterministic validation of every wiring claim in the report — which worker runs what, which queue a call reaches. Explain its two halves: the **parser**, a single Go binary, is what you need; the **visualizer** is optional, for a graph view. Offer channels starting with the most auditable, a pinned `go install` with no npm involved, and help the customer audit it first if they want to. Read the Phase 0 section of [reference/twf-path.md](reference/twf-path.md) before making the offer: it has the channels, the audit check, and the evidence for why the check earns its place.
+
 Nothing in this phase reads customer code. Once it ends, the egress window closes.
 
 **Merge this with Phase 1.** Phase 0 and Phase 1 are both user-facing asks with no code reading in between, so send them as one message rather than costing the user two round-trips. They are numbered separately because the egress rule changes between them, not because they need separate turns.
 
-The optional `twf` toolchain is *not* verified here — checking a path the user may not want is speculative work. Verify it at Phase 3, only if they express interest.
+The toolchain decision belongs here and nowhere later. Installing it needs the network, and an opt-in that arrives after the egress window has closed cannot be acted on.
 
 ## Phase 1 — Lead
 
@@ -163,7 +165,7 @@ Ask the **maturity question** here too, per `reference/maturity-signals.md` — 
 
 Then ask the intake questions from [reference/sa-questions.md](reference/sa-questions.md), **skipping anything the scan already answered, and skipping anything the confirmed stage makes moot** (state the observed answer and ask them to confirm rather than re-asking). Remind them approximate answers are helpful.
 
-Keep this gate to two things: **scope confirmation** and **intake**. If the `twf` path is genuinely available (Phase 0 verified it), mention it in one line here; never spend a labeled section on it.
+Keep this gate to two things: **scope confirmation** and **intake**. The tier-1 wiring check needs no ask — it runs whenever Phase 0 installed the toolchain. If the toolchain is present and the confirmed focus is a bounded slice, you may offer tier-2 behavioral recovery in one line; never spend a labeled section on it.
 
 **Partial answers are the normal case.** If scope is confirmed but intake is only half answered, **proceed to Phase 4** and carry the unanswered items into the Phase 6 gate. Do not stall the pipeline for intake, and do not re-ask an item the user has already declined.
 
@@ -199,8 +201,9 @@ Anything the code cannot show — deployment-time wiring, config-driven routing,
 
 ### Choosing the toolchain
 
-- **Generic path (default):** your normal code tools, Mermaid diagrams per the diagram guide. If you hit an unfamiliar Temporal primitive and need doc-aligned framing for it, consult the official `temporal-developer` skill for that primitive specifically. Do not load it wholesale as preparation — it is written for someone building an app, not reviewing one.
-- **`twf` path (experimental, opt-in):** only if Phase 0 verified the toolchain. It pays off when the review's questions are about **mechanics** — exact option values, control flow, child-workflow semantics — and much less when they are about topology or scale. See [reference/twf-path.md](reference/twf-path.md).
+- **Research with your normal code tools, and draw Mermaid diagrams per the diagram guide, on every run.** If you hit an unfamiliar Temporal primitive and need doc-aligned framing for it, consult the official `temporal-developer` skill for that primitive specifically. Do not load it wholesale as preparation — it is written for someone building an app, not reviewing one.
+- **If Phase 0 installed the `twf` toolchain, run the tier-1 wiring cross-check** ([reference/twf-path.md](reference/twf-path.md)): model the workers, task queues, registrations and call edges *as your report states them*, and let `twf check` and `twf graph` test those claims. Size does not gate it — model the edges your findings depend on, not the whole repository.
+- **Tier-2 behavioral recovery** — workflow bodies into `.twf` — is experimental and for **one bounded slice**, when the user wants it. The same reference covers when it earns its cost and what it cannot express.
 
 ## Phase 5 — Compose, assemble, validate
 
@@ -213,6 +216,8 @@ Then assemble the bundle per [reference/output-spec.md](reference/output-spec.md
 **Provenance must travel with the claim.** A caveat in the gap ledger does not protect a reader of the report; nobody cross-reads a 28-row ledger. If a claim was verified against a different version, environment, or stale artifact, the marker goes **inline, beside the claim, every time it appears**. `*(observed)*` must mean confirmed; anything weaker carries its qualifier.
 
 **Every zero-count ships the command that produced it.** A negative is the one claim a reader can never confirm from a citation — only re-run. "No modern versioning primitives anywhere" is load-bearing and unverifiable unless the search travels with it. Same for "no caller found", "no schedule starting this", "no cap enforced anywhere". State the search and its exclusions.
+
+**Wiring claims are the one claim type these passes cannot check.** Self-consistency compares the bundle with itself, and composition compares facts with each other; neither can tell you that an activity you attributed to one worker actually runs on another. If the toolchain is installed, the tier-1 wiring cross-check is that check: run it, and reconcile every routing diagnostic against the code before the bundle ships. If it is not installed, say in the report that wiring claims were not machine-checked.
 
 **Then gate the diagrams. This step is mandatory and not optional judgment:**
 
@@ -246,6 +251,6 @@ Put to the user the gaps they can actually close, prioritizing **code-fact quest
 2. **The share manifest** — which files to share and what each reveals. Remind them to check the Temporal team can actually open what they send.
 3. **One logistics nudge on meeting length** if the agenda you built is deep: 30 minutes is tight for a real architecture discussion.
 4. **The representative-run nudge, conditionally.** A Namespace + Workflow ID is the highest-leverage, lowest-effort addition — *if it exists*. If the user declined it for a **structural** reason (no single nameable cluster, multi-tenant, pre-production), it is already recorded; **do not nudge again**. Only repeat the ask if they simply hadn't got to it.
-5. **twf path only:** offer to open the visualizer for the customer's own exploration, and be clear the shareable artifacts are the `.twf` files, the diagrams, and the report — a localhost URL is not a deliverable.
+5. **If a `.twf` model exists, offer the graph view.** `twf-view --open <out>/twf/` serves a live, interactive graph of it on a loopback address; editor users can open the extension's visualizer instead. It is for the customer's own exploration — a localhost URL is never a deliverable or a share-manifest entry.
 
 Close by showing the bundle's file list and inviting them to read `report.md` before sharing anything.

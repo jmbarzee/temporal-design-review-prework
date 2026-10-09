@@ -13,8 +13,10 @@ Everything lands in the output directory chosen in Phase 1. Nothing is written a
     external-architecture-<domain>.mmd  # ...or split by domain when over the 25-node cap
     <family>-internal.mmd      # one per in-focus workflow or workflow family
   .work/                       # scratch: raw subagent returns, notes. Not shared.
-  twf/                         # twf path only: one flat package
-    <slice>.twf  topology.twf  twf-retro.md
+  twf/                         # when the toolchain is installed; one flat package
+    topology.twf               #   tier-1 wiring model: ships to the SA
+    <slice>.twf                #   tier-2 behavioral model: optional, not by default
+    twf-retro.md               #   notation reflection: for the toolchain maintainers
 ```
 
 ## report.md template
@@ -63,6 +65,12 @@ The ledger is the map's blank space: honest, bounded, and labeled. "We could not
 **Splitting the external diagram is allowed.** When the topology exceeds the 25-node cap, emit `external-architecture-<domain>.mmd` per domain rather than compressing many real systems into one grouped node. If you do group, the group node must name its members, and a group still counts as one node.
 
 **Bundle filenames can collide with agent-harness guards.** `report.md` in particular may trip a heuristic that blocks agents from writing report files. If a write is refused, that is the harness, not this spec — create the file another way and carry on; do not rename the deliverable.
+
+## Correcting a bundle that was already sent
+
+If a later pass changes anything in a bundle the customer has already sent — a wiring check that catches a misattribution is the usual cause — send a **correction**, never a silent replacement. A reviewer who has read the first version needs the diff, not a re-read.
+
+List exactly what changed: each affected file and claim, what it said, what it says now, how the error was caught, and whether any number moved. Say plainly when nothing else changed ("these are the only two diffs against the version you have"). Fix the bundle files to match, and record the correction in the provenance note.
 
 ## share-manifest.md
 
