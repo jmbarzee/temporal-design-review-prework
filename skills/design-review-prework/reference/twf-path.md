@@ -50,11 +50,13 @@ Installing needs the network, so the toolchain is raised in **Phase 0** alongsid
 
 ## Tier 1 — the wiring cross-check (every run)
 
-This is not a recovery of the system's behavior. It is a small model of **what the report claims about wiring** — and **the calls are the part that does the work**:
+This is not a recovery of the system's behavior. It is a small model of **what the report claims about wiring** — and **the calls are the part that does the work**.
+
+**Its scope is the review's.** It covers every domain the user confirmed at the Phase 3 gate — every one the report treats beyond an inventory row, reduced-depth domains included — never a narrower slice you choose. Only the user narrows it: ask, and record the answer. This holds when the toolchain arrives after the bundle is written: the model checks the report as it stands. The model holds:
 
 - the workers, and the task queue each one polls
 - what each worker registers
-- a **dispatch skeleton** for each workflow in focus: a body holding only its outgoing calls, in order — `activity`, child `workflow`, `nexus`, signal sends — with each task-queue option exactly as the code sets it, and unset where the code leaves it unset
+- a **dispatch skeleton** for each workflow in scope: a body holding only its outgoing calls, in order — `activity`, child `workflow`, `nexus`, signal sends — with each task-queue option exactly as the code sets it, and unset where the code leaves it unset
 
 **A model without the skeleton is hollow, and it checks clean no matter how wrong the wiring is.** In `.twf` a call edge exists only as a statement inside a workflow body. Workers and registrations alone render as trees one level deep and give `twf graph` nothing to route — so the routing check never fires. The same misattributed activity passes clean in a registration-only model and raises `IMPLICIT_ROUTING_MISMATCH` the moment the caller's body contains the one `activity` line the code actually makes. Control-flow fidelity is *not* needed — that is tier 2 — but every call the report's findings depend on is.
 
@@ -76,10 +78,10 @@ It reports three things:
 | Line | Meaning | What to do |
 |---|---|---|
 | **cross-workflow edges**, by kind | Edges between workflows: child calls, signals, Nexus calls | Reconcile against the scan (below). Zero against a nonzero scan means the model has flattened the system. |
-| **call depth 0** for a focus workflow | Hollow: no calls modeled, so the routing check tested nothing | Add its dispatch skeleton. (A `0` that comes with a routing diagnostic is the check working: the call exists but cannot reach its target.) |
+| **call depth 0** for a workflow in scope | Hollow: no calls modeled, so the routing check tested nothing | Add its dispatch skeleton. (A `0` that comes with a routing diagnostic is the check working: the call exists but cannot reach its target.) |
 | **a registered activity nothing calls** | A wiring claim the model does not test | Call it from the workflows the report says use it — or say plainly that this claim is unchecked. |
 
-**Reconcile the edges against the code.** `scan_temporal.sh` counts cross-workflow call sites and lists them, `file:line`, for each focus path. Every site in the focus area, and every one the report cites, lands in exactly one place: an edge in the model, or a row in the report's **edges the graph omits** list — kind, source and target workflow, `file:line` — placed beside any mention of the graph, so nobody reads the graph as the complete coupling. These are the sites `.twf` cannot express yet:
+**Reconcile the edges against the code.** `scan_temporal.sh` counts cross-workflow call sites and lists them, `file:line`, for each focus path — pass it every path in scope. Every site in scope, and every one the report cites, lands in exactly one place: an edge in the model, or a row in the report's **edges the graph omits** list — kind, source and target workflow, `file:line` — placed beside any mention of the graph, so nobody reads the graph as the complete coupling. These are the sites `.twf` cannot express yet:
 
 | In the code | Why the graph cannot show it |
 |---|---|
@@ -91,11 +93,11 @@ A client start from a process entry point — a CLI, an HTTP or webhook handler 
 
 **Model the claim, not your memory of the code.** Write each edge exactly as the report states it, and leave a task queue unset wherever the code leaves it unset. If the report is right, the model checks clean. If it is wrong, `IMPLICIT_ROUTING_MISMATCH` says some call cannot reach a worker that hosts its target. Go back into the code — the answer is usually an override, a default, or a configurator you had not traced — then **fix the report**, and the model with it.
 
-**Size does not gate this tier.** A large repo has more wiring claims, not fewer. Workers, registrations and skeletons stay bounded to the focus area; workflow edges are reconciled as above.
+**Size does not gate this tier.** A large repo has more wiring claims, not fewer. Workers, registrations and skeletons stay bounded to the review's scope; workflow edges are reconciled as above.
 
 **Know what the graph answers: how it is wired, never how much it runs.** `twf graph` is a static dispatch-and-containment view. It does not model timers, continue-as-new frequency, fan-out width, or volume. When the review is a cost or optimization question, say so explicitly, so nobody reads a wiring check as a volume check.
 
-The tier-1 model — topology plus each focus workflow's dispatch skeleton — ships as `twf/topology.twf`.
+The tier-1 model — topology plus the dispatch skeletons — ships as `twf/topology.twf`.
 
 ## Tier 2 — behavioral recovery (one bounded slice, experimental)
 
