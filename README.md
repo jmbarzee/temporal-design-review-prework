@@ -10,7 +10,7 @@ An AI-assistive skill customers run **on their own machine, against their own co
 
 The skill is **read-only** against your code, makes **no network calls** without explicit opt-in, and ends with a share manifest so you can see exactly what you're sending.
 
-Optional, experimental: if the [temporal-architect](https://github.com/jmbarzee/temporal-architect) toolchain is installed, the run can additionally recover your system into validated `.twf` files you keep and visualize.
+Recommended: the [temporal-architect](https://github.com/jmbarzee/temporal-architect) `twf` parser — a single Go binary, installable with a pinned `go install` and no npm — lets the run machine-check every wiring claim in the report (which worker runs what, which queue a call reaches). The skill offers to help install it up front, and to show you the result as an interactive graph. Recovering workflow bodies into `.twf` is a separate, experimental option for one bounded slice.
 
 ## Layout
 
