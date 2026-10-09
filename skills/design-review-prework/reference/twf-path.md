@@ -1,12 +1,10 @@
 # The `twf` toolchain
 
-The temporal-architect toolchain gives this skill the one check prose cannot do for itself: **deterministic validation of wiring** — which worker hosts what, which task queue a call routes to, whether a call can reach a worker at all. It works in two tiers. Recommend the first on every run. Offer the second only for a bounded slice.
+The temporal-architect toolchain gives this skill the one check prose cannot do for itself: **deterministic validation of wiring** — which worker hosts what, which task queue a call routes to, whether a call can reach a worker at all. Recommend tier 1 on every run; offer tier 2 only for a bounded slice.
 
 ## Why it is recommended
 
-Every claim in the report about *where something runs* is an inference from reading code, and nothing else in this skill can check one. The self-consistency pass compares the bundle with itself; the composition pass compares facts with each other. Neither can tell you that an activity you attributed to worker A actually executes on worker B.
-
-That error class is what the toolchain catches. In the first real customer run, a bundle that had **already been sent to the SA** attributed an activity to a shared worker's share of execution volume. Modeling that wiring the way the report described it made `twf graph` raise `IMPLICIT_ROUTING_MISMATCH`: the activity's configurator set no task queue, so it ran on each *calling* workflow's queue instead. No number in the bundle was wrong — the attribution was. Across every evaluated run so far, the routing check has caught a real wiring error, a different one each time.
+Every claim about *where something runs* is an inference from reading code, and nothing else in this skill can check one: the self-consistency and composition passes compare the bundle with itself. In the first real customer run, a bundle **already sent to the SA** attributed an activity to a shared worker's share of execution volume. Modeling that wiring the way the report described it made `twf graph` raise `IMPLICIT_ROUTING_MISMATCH`: the activity's configurator set no task queue, so it ran on each *calling* workflow's queue instead. No number in the bundle was wrong — the attribution was. Across every evaluated run so far, the routing check has caught a real wiring error, a different one each time.
 
 ## Two halves
 
@@ -15,16 +13,12 @@ That error class is what the toolchain catches. In the first real customer run, 
 | **Parser / CLI** — `twf`, one Go binary | `twf check` and `twf graph`: the deterministic validation | **Yes**, for either tier |
 | **Visualizer** — `twf-view`, or the editor extension | an interactive graph of a `.twf` model | No. Optional, for the customer's own exploration |
 
-Say this plainly when you make the offer. A customer who turns down the npm route has not turned down the toolchain: the parser alone is a single binary with several ways to get it.
-
-The binary carries its own grammar reference — `twf spec --list` and `twf spec <slug>` — so the parser is enough to write a model. The `temporal-architect` skills help but are not required.
+Say so when you make the offer: a customer who declines npm has not declined the toolchain. The binary carries its own grammar reference (`twf spec --list`, `twf spec <slug>`), so the parser alone is enough to write a model; the `temporal-architect` skills help but are not required.
 
 ## Phase 0 — confirm, then help install
 
-Installing needs the network, so the toolchain is raised in **Phase 0** alongside the renderer, while egress is still allowed. Never defer it to a later phase: an opt-in that arrives after the egress window has closed cannot be acted on.
-
 1. **Check:** `twf --version`.
-2. **If it is absent, recommend it with the reason above and offer to help install it.** This is a confirm-and-assist, not a yes/no that ends the path. Offer the channels in order of how easy they are to audit:
+2. **If it is absent, recommend it with the reason above and offer to help install it** — a confirm-and-assist, not a yes/no that ends the path. Offer the channels in order of how easy they are to audit:
 
    | Channel | Command | Pulls from |
    |---|---|---|
@@ -36,38 +30,36 @@ Installing needs the network, so the toolchain is raised in **Phase 0** alongsid
 
    Use the newest `tools/lsp/vX.Y.Z` tag in place of `v0.14.0`: `git ls-remote --tags https://github.com/jmbarzee/temporal-architect | grep tools/lsp/`. Go 1.25 or newer is needed for the `go install` route.
 
-3. **If the customer wants to audit before installing, help them do it.** The source is public and MIT-licensed. The parser and CLI can be checked for network and process-execution surface in seconds, from a checkout at the pinned tag:
+3. **If the customer wants to audit first, help.** The source is public and MIT-licensed; from a checkout at the pinned tag, the parser's network and process-execution surface checks in seconds:
 
    ```bash
    grep -rln --include='*.go' -e '"os/exec"' -e '"net"' -e '"net/http"' tools/lsp | grep -v _test.go
    ```
 
-   At `v0.14.0` it returns nothing. Point them at the check rather than asserting the result — it is theirs to verify.
+   At `v0.14.0` it returns nothing. Point them at the check rather than asserting the result.
 
-4. **Offer the visualizer as a separate, optional choice:** `go install github.com/jmbarzee/temporal-architect-dist/packages/twf-view@latest` (a customer auditing it pins a commit, `@<sha>`). It serves a live graph on a loopback address only.
-
-5. **If every channel is declined,** record it, run the generic path, and say in the report that wiring claims were not machine-checked. An SA reading the bundle should know which kind of evidence they are holding.
+4. **Offer the visualizer as a separate choice:** `go install github.com/jmbarzee/temporal-architect-dist/packages/twf-view@latest` (an auditing customer pins a commit, `@<sha>`). It serves a live graph on a loopback address only.
 
 ## Tier 1 — the wiring cross-check (every run)
 
-This is not a recovery of the system's behavior. It is a small model of **what the report claims about wiring** — and **the calls are the part that does the work**.
+Not a recovery of behavior: a small model of **what the report claims about wiring**, in which **the calls do the work**.
 
-**Its scope is the review's.** It covers every domain the user confirmed at the Phase 3 gate — every one the report treats beyond an inventory row, reduced-depth domains included — never a narrower slice you choose. Only the user narrows it: ask, and record the answer. This holds when the toolchain arrives after the bundle is written: the model checks the report as it stands. The model holds:
+**Its scope is the review's** — every domain confirmed at the Phase 3 gate that the report treats beyond an inventory row, reduced-depth domains included. Only the user narrows it: ask, and record the answer. If the toolchain arrives after the bundle is written, the model checks the report as it stands. It holds:
 
 - the workers, and the task queue each one polls
 - what each worker registers
 - a **dispatch skeleton** for each workflow in scope: a body holding only its outgoing calls, in order — `activity`, child `workflow`, `nexus`, signal sends — with each task-queue option exactly as the code sets it, and unset where the code leaves it unset
 
-**A model without the skeleton is hollow, and it checks clean no matter how wrong the wiring is.** In `.twf` a call edge exists only as a statement inside a workflow body. Workers and registrations alone render as trees one level deep and give `twf graph` nothing to route — so the routing check never fires. The same misattributed activity passes clean in a registration-only model and raises `IMPLICIT_ROUTING_MISMATCH` the moment the caller's body contains the one `activity` line the code actually makes. Control-flow fidelity is *not* needed — that is tier 2 — but every call the report's findings depend on is.
+**Without the skeleton the model is hollow, and checks clean however wrong the wiring is.** A call edge exists only as a statement inside a workflow body, so workers and registrations alone give `twf graph` nothing to route. The same misattributed activity passes clean in a registration-only model and raises `IMPLICIT_ROUTING_MISMATCH` once the caller's body holds the one `activity` line the code makes. Control-flow fidelity is tier 2; every call the report's findings depend on is tier 1.
 
 To write a call, its target must be defined. When a call targets something you will not otherwise model, give it a one-line stub definition and register it where the report says it runs: that registration *is* the claim under test. An unwritten call is an unchecked one.
 
-**Trees deepen only through workflow-to-workflow edges** — child workflows, Nexus operations, signals. Activities are leaves. A model whose workflows call only activities renders as trees one level deep, which is correct only if the code really has no workflow-to-workflow calls. So the skeleton carries them:
+**Trees deepen only through workflow-to-workflow edges** — child workflows, Nexus operations, signals; activities are leaves. A model with none is correct only if the code has none, so the skeleton carries them:
 
 - **Never flatten a child workflow into an activity stub**, even a convenient one. A comment saying "falls back to a child workflow" means the model needs a `workflow` call there.
 - **Never let one workflow stand in for a domain.** An out-of-focus domain may get stub bodies, but each workflow an edge reaches is defined under its own name and keeps its own outgoing workflow edges. A stand-in collapses exactly the coupling the graph exists to show, and a reader of the visualizer cannot see the `#` comment that admits it.
 
-Then run `twf check` and `twf graph --json`, and **check the model's shape** — a clean `twf check` cannot tell you any of this:
+Then run `twf check` and `twf graph`, and **check the model's shape**, which a clean `twf check` cannot tell you:
 
 ```bash
 twf graph --json twf/ | jq -r -f scripts/twf_model_shape.jq
@@ -93,15 +85,15 @@ A client start from a process entry point — a CLI, an HTTP or webhook handler 
 
 **Model the claim, not your memory of the code.** Write each edge exactly as the report states it, and leave a task queue unset wherever the code leaves it unset. If the report is right, the model checks clean. If it is wrong, `IMPLICIT_ROUTING_MISMATCH` says some call cannot reach a worker that hosts its target. Go back into the code — the answer is usually an override, a default, or a configurator you had not traced — then **fix the report**, and the model with it.
 
-**Size does not gate this tier.** A large repo has more wiring claims, not fewer. Workers, registrations and skeletons stay bounded to the review's scope; workflow edges are reconciled as above.
+**Size does not gate this tier.** A large repo has more wiring claims, not fewer; the model stays bounded by the review's scope.
 
-**Know what the graph answers: how it is wired, never how much it runs.** `twf graph` is a static dispatch-and-containment view. It does not model timers, continue-as-new frequency, fan-out width, or volume. When the review is a cost or optimization question, say so explicitly, so nobody reads a wiring check as a volume check.
+**The graph answers how it is wired, never how much it runs.** It models no timers, continue-as-new frequency, fan-out width, or volume. In a cost or optimization review, say so, so nobody reads a wiring check as a volume check.
 
 The tier-1 model — topology plus the dispatch skeletons — ships as `twf/topology.twf`.
 
 ## Tier 2 — behavioral recovery (one bounded slice, experimental)
 
-Recovering workflow *bodies* into `.twf` — control flow, awaits, options, child semantics — is the expensive half. Its test: **will writing the notation surface something that reading the code will not?** On a small slice, committing to exact options and explicit control flow forces precision that prose lets you skip. Across a large multi-slice scope, each slice ends up at partial fidelity and the precision lands only where you already understood. So offer it for **one bounded slice** — a focus area of a few workflows — when the user wants it. Never repo-wide.
+Recovering workflow *bodies* — control flow, awaits, options, child semantics — is the expensive half. Its test: **will writing the notation surface something reading the code will not?** On a small slice, committing to exact options forces precision prose lets you skip; across a large scope, every slice lands at partial fidelity and the precision only where you already understood. So: **one bounded slice** of a few workflows, when the user wants it, never repo-wide.
 
 Two limits, both observed repeatedly:
 
@@ -112,10 +104,10 @@ A long `twf-retro.md` is itself a signal: the more the notation fought you, the 
 
 ## Writing `.twf` here
 
-- **Read the notation before you write.** On a recovery you already know the semantics; the notation is the only unknown. Run `twf spec --list` and read the sections you need — or, if the `temporal-architect-design` skill is installed, `notation-examples.md`. (That skill's "write before you read the reference docs" advice is for greenfield design, not recovery.)
+- **Read the notation before you write** — on a recovery it is the only unknown. Run `twf spec --list` and read the sections you need, or the `temporal-architect-design` skill's `notation-examples.md` if installed. (That skill's "write before you read" advice is for greenfield design.)
 - **Comments are not accepted inside an `options:` or `default_options:` block** through `v0.14.0`, whether leading or between keys (`expected option key, got COMMENT`). Put provenance comments above the block keyword.
-- **If the `temporal-architect-design` skill is installed, follow its reverse path** (`reference/reverse-engineering.md`: slice-mapper → project-discovery → extract → fidelity check). Either way: the shared topology — workers and namespaces — is authored once, in `topology.twf`, and domain files declare none of their own. (The design skill calls this "symbols-only"; it means *no worker or namespace declarations*, not stub bodies or one representative per domain.) And fidelity comes first — capture what the code does, and never "fix" it during extraction.
-- **Neutral voice inside the model.** Write `# AS FOUND:` with the mechanism and its values; never `ANTI-PATTERN:` or any other verdict. The `.twf` is customer-facing and the map-not-review rule applies to it.
+- **If the `temporal-architect-design` skill is installed, follow its reverse path** (`reference/reverse-engineering.md`). Either way, workers and namespaces are declared once, in `topology.twf`, and domain files declare none (the design skill's "symbols-only" — not stub bodies or one representative per domain). Capture what the code does; never "fix" it during extraction.
+- **Neutral voice inside the model.** The `.twf` is customer-facing: write `# AS FOUND:` with the mechanism and its values, never `ANTI-PATTERN:` or any other verdict.
 - **A model bug is not a design finding.** If the model misstates the code, fix the model; never report it.
 
 ## Outputs
@@ -134,12 +126,6 @@ Under `<out>/twf/`, as one flat package — cross-file references resolve only w
 |---|---|---|
 | `twf/twf-retro.md` | What did the code do that **`.twf` could not express**? | The `temporal-architect` toolchain maintainers |
 | `gap-ledger.md` | What could **the reader not determine** about this system? | The SA and the customer's own team |
-| *(not in the bundle)* | How well did **this prework skill** perform? | Whoever maintains this skill |
+| *(not in the bundle; raise in conversation if the user asks)* | How well did **this prework skill** perform? | Whoever maintains this skill |
 
 **`twf-retro.md` is about the notation**, not about the system and not about this skill. Each entry: what the code does, its `file:line`, and the construct that was missing or the workaround it forced. A parser bug or a rejected-but-valid construct belongs here with a minimal reproducing probe when you have one — that is the most actionable thing a maintainer can receive. Before it leaves the machine, check it for internal identifiers — ticket IDs in quoted comments, deployed namespace, endpoint and cluster names: it is headed to a different third party than the bundle, possibly a public issue tracker.
-
-Something *the reader* could not determine — hidden deployment wiring, config-driven routing, a service with no source — is a `gap-ledger.md` entry, not a retro entry. Friction with these prework instructions belongs in neither; raise it in conversation if the user asks.
-
-## Visualizer
-
-Whenever a `.twf` model exists, **offer the customer a graph view of it**: `twf-view --open <out>/twf/` serves a live, interactive graph on a loopback address, and editor users can open the extension's visualizer instead. It is for their own exploration — a localhost URL is never a deliverable or a share-manifest entry.

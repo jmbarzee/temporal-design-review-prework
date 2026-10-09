@@ -1,10 +1,8 @@
 # What the SA needs answered
 
-These are the questions a Temporal Solutions Architect prepares against. Every one answered in prework is meeting time recovered for actual recommendations. Ask them at the Phase 3 confirm gate, **skipping anything the code scan already answered** (state the observed answer, ask for confirmation instead). Preface the intake with: *"Approximate answers are helpful — order of magnitude is enough, and 'unknown' is a fine answer."*
+Every question answered in prework is meeting time recovered for recommendations. Ask them as one block at the Phase 3 gate (§4–5 may already have come in Phase 1), prefaced with: *"Approximate answers are helpful — order of magnitude is enough, and 'unknown' is a fine answer."* Where the scan already answered one, state the observed answer and ask for confirmation instead.
 
-Record every answer in `intake.md` using the inline evidence forms from SKILL.md — `*(stated)*` or `*(observed: path:line)*`. Every "unknown" also becomes a gap-ledger entry.
-
-Ask these as one block, not one at a time. Expect **partial answers** — that is the normal case, not a failure. If scope is confirmed and intake is half done, proceed to Phase 4 and carry the rest to the Phase 6 gate.
+Record answers in `intake.md` as `*(stated)*` or `*(observed: path:line)*`; every "unknown" is also a gap-ledger entry. Partial answers are the normal case: proceed to Phase 4 and carry the rest to the Phase 6 gate, never stalling and never re-asking a declined item before then.
 
 ## 1. Use case, in the customer's own words
 - What business problem does this system solve? (Not the technical shape — the *why*.)
@@ -12,16 +10,16 @@ Ask these as one block, not one at a time. Expect **partial answers** — that i
 
 ## 2. SDK and build status
 
-**Stage first.** The maturity question from `reference/maturity-signals.md` is asked alongside these, and its answer decides which of the items below are even worth asking. A prototype makes §3 (representative run) and most of §6 (cost/volume) moot; mature production makes them the most valuable lines in the bundle. Ask the stage question, then prune.
+Ask the maturity question ([maturity-signals.md](maturity-signals.md)) first, then prune: a prototype makes §3 and most of §6 moot; mature production makes them the most valuable lines in the bundle.
 
 - Which SDK(s)? (usually observable — confirm)
 - How built-out is it? Planning / early-stage with placeholders / running in staging / production. Nuance welcome ("workflow logic built and tested, external calls still stubbed" is a great answer).
 
 ## 3. A representative run (highest-leverage, lowest-effort item)
-- If any workflow already runs in a real namespace: **Namespace + Workflow ID** (Run ID optional) of one representative execution. Two copy-pasted IDs let the SA read real event history — retry counts, event counts, payload sizes, timing — which no diagram can show.
+- If any workflow already runs in a real namespace: **Namespace + Workflow ID** (Run ID optional) of one representative execution. Two IDs let the SA read real event history — retry counts, event counts, payload sizes, timing — which no diagram can show.
 
-Three branches, not two:
-- **They can name one** → record it; it is the single most valuable line in the bundle.
+Three branches:
+- **They can name one** → record it; it is the most valuable line in the bundle.
 - **Pre-production** → skip without friction; note "pre-production" in the report.
 - **Runs exist, but none is nameable** → common for platform, infra, and multi-tenant teams ("it varies per cluster", "no single namespace"). This is a *structural* decline: record it as a gap with that reason and **do not ask again in Phase 7**. Offer the alternative — a dashboard screenshot, or aggregate numbers for one representative tenant.
 
