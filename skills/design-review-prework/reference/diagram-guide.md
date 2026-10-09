@@ -2,13 +2,11 @@
 
 The bar: an SA seeing these diagrams for the first time can locate cost, risk, and scale bottlenecks *without asking what the boxes mean*. "4 boxes and lines" fails that bar and can get a review cancelled outright.
 
-Two diagram types are required. They answer different questions; never merge them into one mega-diagram.
+Two diagram types are required. They answer different questions; never merge them.
 
-Every diagram must pass `scripts/lint_diagrams.py` (Phase 5). The rules below are what it checks.
+Every diagram must pass `scripts/lint_diagrams.py` (Phase 5), which checks the rules below. **Declare the role on the first line** — `%% role: topology` or `%% role: workflow`. The node cap depends on it, not on the filename.
 
-**Declare the diagram's role on the first line** — `%% role: topology` or `%% role: workflow`. The linter requires it, and the node cap depends on it. It is a declaration and not an inference from the filename, so a topology diagram named `something-internal.mmd` still gets the topology cap.
-
-## Mermaid safe subset (non-negotiable — this is what keeps diagrams renderable)
+## Mermaid safe subset
 
 - **Quote every node label.** `api["Order API"]`, never `api[Order API]`. An unquoted label containing a comma, colon, parenthesis, slash, or a line break **fails to parse**, and you will not see the failure without a renderer.
 - **Line breaks inside labels use `<br/>`**, inside the quotes: `w1["billing-worker<br/>K8s, 3 replicas"]`. Never a literal newline in a label.
@@ -17,7 +15,7 @@ Every diagram must pass `scripts/lint_diagrams.py` (Phase 5). The rules below ar
 
 ## The legend must be in the canvas, not in a comment
 
-A `%%` comment legend satisfies the letter of "every diagram has a legend" and **defeats its purpose**: comments vanish in the rendered PNG, which is the artifact that gets pasted into forms and decks. Put the legend in the diagram as a subgraph of shape samples:
+Comments vanish in the rendered PNG, which is what gets pasted into forms and decks. Put the legend in the diagram as a subgraph of shape samples:
 
 ```mermaid
 flowchart LR
@@ -29,14 +27,14 @@ flowchart LR
   end
 ```
 
-**Sequence diagrams are the exception**, because Mermaid `sequenceDiagram` cannot contain a `subgraph`. There, use a note instead, and the linter accepts it:
+A `sequenceDiagram` cannot contain a `subgraph`, so it uses a note:
 
 ```mermaid
 sequenceDiagram
     Note over A,B: Legend - solid = call, dashed = poll result
 ```
 
-Comments above the diagram are still useful for provenance (source paths, date) — just never for the legend.
+Comments still carry provenance (source paths, date).
 
 ## Diagram 1 — External architecture (exactly one)
 
@@ -51,9 +49,7 @@ Must show:
 
 Use `flowchart LR` with subgraphs for *your services*, *Temporal*, *workers*, and *external dependencies*.
 
-**Hard cap: 25 nodes**, and over that, split into `external-architecture-<domain>.mmd` per domain — an unreadable diagram is a missing diagram.
-
-**What counts toward the cap:** real components only. Subgraph containers and the legend's shape samples are scaffolding and are excluded, so the 25 is a genuine budget of 25 things in the system, not 25 lines of Mermaid.
+**Hard cap: 25 nodes** — real components only; subgraph containers and legend samples don't count. Over it, split into `external-architecture-<domain>.mmd` per domain rather than compressing real systems into grouped nodes; an unreadable diagram is a missing diagram. A group node that remains names its members and counts as one node.
 
 ## Diagram 2 — Internal workflow shape (one per in-focus workflow *or family*)
 
@@ -65,14 +61,10 @@ Use `flowchart TD`, or a sequence diagram when inter-service back-and-forth is t
 
 **Workflow families get one diagram, not one each.** When several workflows form a single chain (a parent plus children whose *inter-workflow* relationships — ParentClosePolicy, await-start-vs-await-result — are the point), draw the family as one diagram named for the family: `<family>-internal.mmd`. Splitting it destroys the very relationship worth reviewing.
 
-**Internal and family diagrams are exempt from the 25-node cap**, and label-dense nodes are explicitly blessed here: carrying exact timeouts, retry policies, and policy values in the node is more useful to an SA than a clean-looking diagram that omits them. Past ~40 nodes, reconsider.
+**Internal and family diagrams are exempt from the 25-node cap**, and dense labels are welcome: exact timeouts and policy values in the node serve an SA better than a clean diagram that omits them. Past ~40 nodes, reconsider.
 
-## Diagrams describe, they don't editorialize
+## Labels describe; the ledger holds doubt
 
-Node and edge labels carry names, roles, and exact values — never assessments. `"BatchActivity<br/>start_to_close 20 years, retry unbounded"` is a good label; `"BatchActivity (risky timeout!)"` is not. No warning icons, no red-for-bad coloring, no "⚠" annotations. Use color and shape only to distinguish *kinds* of thing (activity, child workflow, signal, external system), as the legend declares.
+Labels carry names, roles, and exact values: `"BatchActivity<br/>start_to_close 20 years, retry unbounded"`, never `"BatchActivity (risky timeout!)"`. No warning icons, no red-for-bad, no "⚠" — color and shape distinguish only *kinds* of thing, as the legend declares.
 
-## Uncertainty goes in the ledger, not the drawing
-
-A component you inferred but could not verify gets a **gap-ledger entry**, not a dashed border or a `?`. The ledger carries the reason, what would close it, and who might know — a dashed line carries none of that, and the ledger is mandatory anyway. Keep the drawing to what you can state, and let the blank space be explicit in prose.
-
-Same evidence rule as the report: observed, stated, or effective — nothing else.
+A component you inferred but could not verify gets a gap-ledger entry, not a dashed border or a `?`; the ledger carries the reason and what would close it, which a dashed line cannot.

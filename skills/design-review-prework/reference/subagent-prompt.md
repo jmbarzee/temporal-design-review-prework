@@ -1,6 +1,6 @@
 # The subagent prompt block
 
-Copy this verbatim into every research subagent dispatch and fill the three placeholders. Do not re-author it per run; inconsistent briefs produce inconsistent returns that cost more to reconcile than the fan-out saved.
+Copy this verbatim into every research subagent dispatch and fill the three placeholders. Re-authored briefs produce returns that cost more to reconcile than the fan-out saved.
 
 ---
 
@@ -22,8 +22,8 @@ RULES
 2. MAP, NOT REVIEW. State mechanisms and exact values; never grade them.
    Banned words: risk, concern, hazard, bug, anti-pattern, best practice,
    should, ought, well-built, correct, wrong, better, worse, deserves
-   attention, worth flagging. If you reach for one, you have found something
-   to state precisely or to raise as a question instead.
+   attention, worth flagging, red flag. If you reach for one, you have
+   found something to state precisely or to raise as a question instead.
    Quoting the code's OWN comment or TODO is observation, not assessment —
    attribute it and keep it.
 

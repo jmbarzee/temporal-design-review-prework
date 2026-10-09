@@ -1,12 +1,10 @@
 # Reading the target's maturity
 
-Advice that is right for a speculative prototype is actively wrong for seasoned production, and the reverse. An SA who knows which one they are looking at calibrates instantly; one who guesses wrong spends the meeting recalibrating. So establish the target's **stage** early, and let it shape the rest of the run.
-
-Stage is **context, not a grade**. A six-week-old prototype is not worse than a ten-year-old platform — it is a different kind of place, and the map should say which. Never present a stage as a criticism, and never let "early" imply "sloppy" or "mature" imply "correct."
+Advice right for a speculative prototype is wrong for seasoned production, and the reverse; an SA who guesses the stage wrong spends the meeting recalibrating. Stage is **context, not a grade**: never let "early" imply "sloppy" or "mature" imply "correct."
 
 ## The cheap git survey
 
-Run this once per repo, right after the paths are known. It reads git metadata only — no source, no network — and takes seconds even on large repositories.
+Once per repo, right after the paths are known. Git metadata only — no source, no network.
 
 ```bash
 R=<repo path>
@@ -27,7 +25,7 @@ ls -d "$R"/.github/workflows "$R"/.gitlab-ci.yml 2>/dev/null              # CI p
 
 Plus a test-density ratio (test files against source files in the target language) and, if it is quick, a count of `TODO`/`FIXME` markers in the focus paths.
 
-**Bound the cost.** On a very large monorepo, scope `find`-based counts to the focus directories rather than the whole tree, and skip vendored paths. If any command is slow, drop it — no single signal is worth minutes.
+On a large monorepo, scope `find`-based counts to the focus directories and skip vendored paths. Drop any slow command — no single signal is worth minutes.
 
 ## What the signals suggest
 
@@ -41,21 +39,17 @@ Read them together; no single number decides. These are correlations, not defini
 | Multi-year but last commit long ago, low recent cadence | Maintenance mode or inherited/legacy |
 | High recent churn concentrated in the focus paths | The focus area is actively moving — say so; the design may change before the meeting |
 
-A mismatch is itself a finding worth recording plainly: a repo with ten years of history whose focus directory was created three weeks ago is a mature platform growing a new limb, and the review is about the limb.
+A mismatch is itself worth recording: a ten-year-old repo whose focus directory is three weeks old is a mature platform growing a new limb, and the review is about the limb.
 
 ## Ask the user — their answer wins
 
-The git survey informs the question; it does not replace it. Ask directly, offering the spectrum:
+The survey informs the question; it does not replace it:
 
 > "Where would you put this on the spectrum from speculative prototype to seasoned production? The git history suggests <one-line summary of signals> — does that match how you'd describe it? And is the *specific area we're reviewing* at the same stage as the repo overall?"
 
-That last clause matters: the repo and the focus area often differ, and the focus area's stage is the one that calibrates the review.
-
-Record the user's answer as `*(stated)*` and the git signals as observations. **If they disagree, record both without adjudicating** — "the history shows five years and 300 contributors; the team describes the reviewed workflows as early-stage" is a genuinely useful line for an SA, and deciding who is right is not your job.
+The focus area's stage, not the repo's, calibrates the review. Record the answer as `*(stated)*` and the signals as observations; **if they disagree, record both without adjudicating** — "the history shows five years and 300 contributors; the team describes the reviewed workflows as early-stage."
 
 ## How stage calibrates the rest of the run
-
-This is the payoff. Let the stage change what you ask and how deep you go.
 
 **Prototype / spike**
 - Do not ask for a representative run, production metrics, or incident history — they do not exist, and asking signals you weren't listening. Mark the representative-run item resolved-by-stage.
