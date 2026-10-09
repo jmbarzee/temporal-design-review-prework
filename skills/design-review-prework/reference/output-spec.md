@@ -24,7 +24,7 @@ Everything lands in the output directory chosen in Phase 1. Nothing is written a
 1. **Executive summary** — 5–10 lines. Lead with what the customer now has (architecture doc, diagrams, agenda); then the 3–5 **defining characteristics** of the system, stated as facts an SA will orient on fastest; then what to send the SA. No process narration, and no verdicts — see SKILL.md "What this produces: a map, not a review."
 
    A defining characteristic is structural: "provisioning is driven by long-lived entity workflows that carry state across continue-as-new; cross-plane calls are activities that start and poll a workflow in another namespace." Not "the cross-plane coupling is concerning."*
-2. **System overview** — the product, where Temporal sits, deployment target, SDK(s), build status. **State each deployment/topology fact once, here** — §5 references it rather than repeating it.
+2. **System overview** — the product, where Temporal sits, deployment target, SDK(s), build status. **State each deployment/topology fact once, here** — §5 references it rather than repeating it. When a `twf/` model ships, list here the **edges the graph omits** ([twf-path.md](twf-path.md#tier-1--the-wiring-cross-check-every-run)).
 3. **Workflow inventory** — table: workflow, one-phrase purpose, trigger, worker/task queue, in focus? Every workflow found, including out-of-focus ones, one line each.
 4. **Focus workflows** — per in-focus workflow or family: a short narrative of its shape (trigger → steps → outcome, signals/timers/children/retries/failure paths), a pointer to its diagram, and a **mechanism-and-values** subsection.
 

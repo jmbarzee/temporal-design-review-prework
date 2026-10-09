@@ -49,11 +49,19 @@ echo "   NOTE: matched on ANY receiver (.RegisterWorkflow...), because a codebas
 echo "         alias the SDK import or hand components a Registry rather than a worker."
 echo "         Verify the idiom in one file before trusting these counts."
 echo
-echo "-- workflow starts (trigger surface)"
-printf "   ExecuteWorkflow=%s SignalWithStart=%s ExecuteChild=%s\n" \
-  "$(cnt 'ExecuteWorkflow\(' "$GO $TS $PY")" \
-  "$(cnt 'SignalWithStartWorkflow\(' "$GO $TS $PY")" \
-  "$(cnt 'ExecuteChildWorkflow\(' "$GO $TS $PY")"
+CHILD='ExecuteChildWorkflow\(|(execute|start)_child_workflow\(|(execute|start)Child\(|newChildWorkflowStub\('
+EXT='(Signal|RequestCancel)ExternalWorkflow\(|get_external_workflow_handle|getExternalWorkflowHandle\(|newExternalWorkflowStub\('
+NEXUS='NewNexusClient\(|create_nexus_client\(|createNexusClient\(|newNexusServiceStub\('
+CLIENT='[.]ExecuteWorkflow\(|SignalWithStartWorkflow\(|[.]SignalWorkflow\(|UpdateWorkflow\(|UpdateWithStartWorkflow\(|[.](start|execute|signal_with_start)_workflow\(|[.]workflow[.](start|execute|signalWithStart)\('
+XW="$CHILD|$EXT|$NEXUS|$CLIENT"
+echo "-- cross-workflow call sites (reconcile a twf model's workflow edges against these)"
+printf "   child=%s external-signal/cancel=%s nexus-clients=%s client-start/signal/update=%s\n" \
+  "$(cnt "$CHILD" "$GO $TS $PY $JAVA")" "$(cnt "$EXT" "$GO $TS $PY $JAVA")" \
+  "$(cnt "$NEXUS" "$GO $TS $PY $JAVA")" "$(cnt "$CLIENT" "$GO $TS $PY $JAVA")"
+echo "   NOTE: generated code is excluded, so calls made through a generated wrapper are"
+echo "         invisible here. Few sites in a repo whose domains are child-driven means:"
+echo "         find the wrapper's call idiom in one file, count that instead, and name"
+echo "         the idiom in the report."
 echo
 echo "-- durability / lifetime mechanics"
 printf "   ContinueAsNew=%s GetVersion=%s Patched=%s SetUpdateHandler=%s heartbeat=%s\n" \
@@ -72,6 +80,8 @@ for F in "$@"; do
   printf "    first-party files=%s  registrations=%s  churn(90d commits)=%s\n" \
     "$(n "$FF")" "$(cnt 'Register[A-Za-z]*(Workflow|Activit)[A-Za-z]*\(' "$FF")" \
     "$(git rev-list --count --since='90 days ago' HEAD -- "$F" 2>/dev/null || echo '?')"
+  printf "    cross-workflow sites=%s\n" "$(cnt "$XW" "$FF")"
+  [ -n "$FF" ] && grep -nE "$XW" $FF 2>/dev/null | cut -c1-160 | sed 's/^/      /'
 done
 echo
 echo "Report the exclusion count alongside any inventory number."

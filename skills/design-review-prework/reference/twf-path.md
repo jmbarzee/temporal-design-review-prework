@@ -44,7 +44,7 @@ Installing needs the network, so the toolchain is raised in **Phase 0** alongsid
 
    At `v0.14.0` it returns nothing. Point them at the check rather than asserting the result — it is theirs to verify.
 
-4. **Offer the visualizer as a separate, optional choice:** `brew install jmbarzee/twf/twf-view`, or `go install github.com/jmbarzee/temporal-architect-dist/packages/twf-view@latest` (pin a version if they are auditing). It serves a live graph on a loopback address only.
+4. **Offer the visualizer as a separate, optional choice:** `go install github.com/jmbarzee/temporal-architect-dist/packages/twf-view@latest` (a customer auditing it pins a commit, `@<sha>`). It serves a live graph on a loopback address only.
 
 5. **If every channel is declined,** record it, run the generic path, and say in the report that wiring claims were not machine-checked. An SA reading the bundle should know which kind of evidence they are holding.
 
@@ -60,10 +60,10 @@ This is not a recovery of the system's behavior. It is a small model of **what t
 
 To write a call, its target must be defined. When a call targets something you will not otherwise model, give it a one-line stub definition and register it where the report says it runs: that registration *is* the claim under test. An unwritten call is an unchecked one.
 
-**Trees deepen only through workflow-to-workflow edges** — child workflows, Nexus operations, signals. Activities are leaves. A model whose workflows call only activities renders as trees one level deep, which is correct only if the code really has no workflow-to-workflow calls. So the skeleton must carry every child-workflow call, Nexus operation and signal the code makes in the focus area:
+**Trees deepen only through workflow-to-workflow edges** — child workflows, Nexus operations, signals. Activities are leaves. A model whose workflows call only activities renders as trees one level deep, which is correct only if the code really has no workflow-to-workflow calls. So the skeleton carries them:
 
 - **Never flatten a child workflow into an activity stub**, even a convenient one. A comment saying "falls back to a child workflow" means the model needs a `workflow` call there.
-- **A representative workflow standing in for a whole domain** — useful for out-of-focus domains — must be labeled as one in the report. The graph then shows representative wiring, not the system's coupling, and a reader of the visualizer cannot see a `#` comment saying so.
+- **Never let one workflow stand in for a domain.** An out-of-focus domain may get stub bodies, but each workflow an edge reaches is defined under its own name and keeps its own outgoing workflow edges. A stand-in collapses exactly the coupling the graph exists to show, and a reader of the visualizer cannot see the `#` comment that admits it.
 
 Then run `twf check` and `twf graph --json`, and **check the model's shape** — a clean `twf check` cannot tell you any of this:
 
@@ -75,15 +75,23 @@ It reports three things:
 
 | Line | Meaning | What to do |
 |---|---|---|
-| **workflow-to-workflow edges: 0** | Every tree is one level deep | Confirm the code has no child, Nexus or signal calls in the focus area. If it does, the model has flattened the system. |
+| **cross-workflow edges**, by kind | Edges between workflows: child calls, signals, Nexus calls | Reconcile against the scan (below). Zero against a nonzero scan means the model has flattened the system. |
 | **call depth 0** for a focus workflow | Hollow: no calls modeled, so the routing check tested nothing | Add its dispatch skeleton. (A `0` that comes with a routing diagnostic is the check working: the call exists but cannot reach its target.) |
 | **a registered activity nothing calls** | A wiring claim the model does not test | Call it from the workflows the report says use it — or say plainly that this claim is unchecked. |
 
-Some calls cannot be expressed yet — notably a signal sent by ID to a workflow the caller did not start. Record those edges in the report and note that the graph omits them, so nobody reads the graph as the complete coupling.
+**Reconcile the edges against the code.** `scan_temporal.sh` counts cross-workflow call sites and lists them, `file:line`, for each focus path. Every site in the focus area, and every one the report cites, lands in exactly one place: an edge in the model, or a row in the report's **edges the graph omits** list — kind, source and target workflow, `file:line` — placed beside any mention of the graph, so nobody reads the graph as the complete coupling. These are the sites `.twf` cannot express yet:
+
+| In the code | Why the graph cannot show it |
+|---|---|
+| a signal to a workflow the caller did not start, addressed by ID | a `signal` send goes only through the handle of a child the sender started |
+| a workflow started, signalled, updated or awaited from an activity | activity bodies hold no workflow calls |
+| an update or cancel sent to another workflow | no cross-workflow update or cancel form |
+
+A client start from a process entry point — a CLI, an HTTP or webhook handler — is a trigger, not an edge: it belongs in the workflow inventory, not the omitted list.
 
 **Model the claim, not your memory of the code.** Write each edge exactly as the report states it, and leave a task queue unset wherever the code leaves it unset. If the report is right, the model checks clean. If it is wrong, `IMPLICIT_ROUTING_MISMATCH` says some call cannot reach a worker that hosts its target. Go back into the code — the answer is usually an override, a default, or a configurator you had not traced — then **fix the report**, and the model with it.
 
-**Size does not gate this tier.** A large repo has more wiring claims, not fewer. Model the ones the report depends on — the focus area's workers and the edges its findings cite — rather than the whole repository.
+**Size does not gate this tier.** A large repo has more wiring claims, not fewer. Workers, registrations and skeletons stay bounded to the focus area; workflow edges are reconciled as above.
 
 **Know what the graph answers: how it is wired, never how much it runs.** `twf graph` is a static dispatch-and-containment view. It does not model timers, continue-as-new frequency, fan-out width, or volume. When the review is a cost or optimization question, say so explicitly, so nobody reads a wiring check as a volume check.
 
@@ -103,7 +111,7 @@ A long `twf-retro.md` is itself a signal: the more the notation fought you, the 
 ## Writing `.twf` here
 
 - **Read the notation before you write.** On a recovery you already know the semantics; the notation is the only unknown. Run `twf spec --list` and read the sections you need — or, if the `temporal-architect-design` skill is installed, `notation-examples.md`. (That skill's "write before you read the reference docs" advice is for greenfield design, not recovery.)
-- **Comments are not accepted inside an `options:` or `default_options:` block** at `v0.14.0`, whether leading or between keys (`expected option key, got COMMENT`). Put provenance comments above the block keyword.
+- **Comments are not accepted inside an `options:` or `default_options:` block** through `v0.14.0`, whether leading or between keys (`expected option key, got COMMENT`). Put provenance comments above the block keyword.
 - **If the `temporal-architect-design` skill is installed, follow its reverse path** (`reference/reverse-engineering.md`: slice-mapper → project-discovery → extract → fidelity check). Either way: the shared topology — workers and namespaces — is authored once, in `topology.twf`, and domain files declare none of their own. (The design skill calls this "symbols-only"; it means *no worker or namespace declarations*, not stub bodies or one representative per domain.) And fidelity comes first — capture what the code does, and never "fix" it during extraction.
 - **Neutral voice inside the model.** Write `# AS FOUND:` with the mechanism and its values; never `ANTI-PATTERN:` or any other verdict. The `.twf` is customer-facing and the map-not-review rule applies to it.
 - **A model bug is not a design finding.** If the model misstates the code, fix the model; never report it.
