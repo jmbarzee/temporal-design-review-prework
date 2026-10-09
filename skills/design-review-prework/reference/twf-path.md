@@ -50,13 +50,28 @@ Installing needs the network, so the toolchain is raised in **Phase 0** alongsid
 
 ## Tier 1 — the wiring cross-check (every run)
 
-This is not a recovery of the system. It is a small model of **what the report claims about wiring**:
+This is not a recovery of the system's behavior. It is a small model of **what the report claims about wiring** — and **the calls are the part that does the work**:
 
 - the workers, and the task queue each one polls
 - what each worker registers
-- the call edges the report asserts — which workflow calls which activity or child, on which queue
+- a **dispatch skeleton** for each workflow in focus: a body holding only its outgoing calls, in order — `activity`, child `workflow`, `nexus`, signal sends — with each task-queue option exactly as the code sets it, and unset where the code leaves it unset
 
-Then run `twf check` and `twf graph --json`.
+**A model without the skeleton is hollow, and it checks clean no matter how wrong the wiring is.** In `.twf` a call edge exists only as a statement inside a workflow body. Workers and registrations alone render as trees one level deep and give `twf graph` nothing to route — so the routing check never fires. The same misattributed activity passes clean in a registration-only model and raises `IMPLICIT_ROUTING_MISMATCH` the moment the caller's body contains the one `activity` line the code actually makes. Control-flow fidelity is *not* needed — that is tier 2 — but every call the report's findings depend on is.
+
+To write a call, its target must be defined. When a call targets something you will not otherwise model, give it a one-line stub definition and register it where the report says it runs: that registration *is* the claim under test. An unwritten call is an unchecked one.
+
+Then run `twf check` and `twf graph --json`, and **confirm the model is not hollow** — list each workflow with its outgoing dispatch edges:
+
+```bash
+twf graph --json twf/ | jq -r '
+  [.graph.edges[] | select(.kind != "containment") | .from] as $out
+  | .graph.nodes[] | .id | select(startswith("workflow:")) | . as $w
+  | "\([$out[] | select(. == $w)] | length)  \($w)"'
+```
+
+A focus workflow showing `0` either genuinely calls nothing or has its registration modeled and not its calls. Know which before you trust a clean check. (A `0` that comes with a routing diagnostic is the check working: the call exists but cannot reach its target.)
+
+Some calls cannot be expressed yet — notably a signal sent by ID to a workflow the caller did not start. Record those edges in the report and note that the graph omits them, so nobody reads the graph as the complete coupling.
 
 **Model the claim, not your memory of the code.** Write each edge exactly as the report states it, and leave a task queue unset wherever the code leaves it unset. If the report is right, the model checks clean. If it is wrong, `IMPLICIT_ROUTING_MISMATCH` says some call cannot reach a worker that hosts its target. Go back into the code — the answer is usually an override, a default, or a configurator you had not traced — then **fix the report**, and the model with it.
 
@@ -64,7 +79,7 @@ Then run `twf check` and `twf graph --json`.
 
 **Know what the graph answers: how it is wired, never how much it runs.** `twf graph` is a static dispatch-and-containment view. It does not model timers, continue-as-new frequency, fan-out width, or volume. When the review is a cost or optimization question, say so explicitly, so nobody reads a wiring check as a volume check.
 
-The tier-1 model ships as `twf/topology.twf`.
+The tier-1 model — topology plus each focus workflow's dispatch skeleton — ships as `twf/topology.twf`.
 
 ## Tier 2 — behavioral recovery (one bounded slice, experimental)
 
